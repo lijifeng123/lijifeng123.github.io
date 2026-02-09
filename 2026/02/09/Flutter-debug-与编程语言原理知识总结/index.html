@@ -20,30 +20,36 @@
     var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="个人博客">
-<meta property="og:type" content="website">
-<meta property="og:title" content="个人技术生活分享">
-<meta property="og:url" content="https://lijifeng168.com/index.html">
+  <meta name="description" content="一、问题背景：Flutter iOS 调试连接失败1.1 问题现象使用 Android Studio 运行 Flutter iOS 项目时，卡在： 1flutter: The Dart VM service is listening on http:&#x2F;&#x2F;0.0.0.0:50464&#x2F;xxx  应用白屏，无法继续。但 Xcode 直接运行或命令行 flutter run 正常。 1.2 解决方案方案一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flutter debug 与编程语言原理知识总结">
+<meta property="og:url" content="https://lijifeng168.com/2026/02/09/Flutter-debug-%E4%B8%8E%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80%E5%8E%9F%E7%90%86%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93/index.html">
 <meta property="og:site_name" content="个人技术生活分享">
-<meta property="og:description" content="个人博客">
+<meta property="og:description" content="一、问题背景：Flutter iOS 调试连接失败1.1 问题现象使用 Android Studio 运行 Flutter iOS 项目时，卡在： 1flutter: The Dart VM service is listening on http:&#x2F;&#x2F;0.0.0.0:50464&#x2F;xxx  应用白屏，无法继续。但 Xcode 直接运行或命令行 flutter run 正常。 1.2 解决方案方案一">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-02-09T12:00:00.000Z">
+<meta property="article:modified_time" content="2026-02-09T11:45:08.123Z">
 <meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="Flutter">
+<meta property="article:tag" content="Dart">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="调试">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://lijifeng168.com/">
+<link rel="canonical" href="https://lijifeng168.com/2026/02/09/Flutter-debug-%E4%B8%8E%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80%E5%8E%9F%E7%90%86%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>个人技术生活分享</title>
+  <title>Flutter debug 与编程语言原理知识总结 | 个人技术生活分享</title>
   
 
 
@@ -142,9 +148,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -160,10 +167,9 @@
       <meta itemprop="name" content="个人技术生活分享">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2026/02/09/Flutter-debug-%E4%B8%8E%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80%E5%8E%9F%E7%90%86%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">Flutter debug 与编程语言原理知识总结</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          Flutter debug 与编程语言原理知识总结
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -196,7 +202,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="一、问题背景：Flutter-iOS-调试连接失败"><a href="#一、问题背景：Flutter-iOS-调试连接失败" class="headerlink" title="一、问题背景：Flutter iOS 调试连接失败"></a>一、问题背景：Flutter iOS 调试连接失败</h1><h2 id="1-1-问题现象"><a href="#1-1-问题现象" class="headerlink" title="1.1 问题现象"></a>1.1 问题现象</h2><p>使用 Android Studio 运行 Flutter iOS 项目时，卡在：</p>
+        <h1 id="一、问题背景：Flutter-iOS-调试连接失败"><a href="#一、问题背景：Flutter-iOS-调试连接失败" class="headerlink" title="一、问题背景：Flutter iOS 调试连接失败"></a>一、问题背景：Flutter iOS 调试连接失败</h1><h2 id="1-1-问题现象"><a href="#1-1-问题现象" class="headerlink" title="1.1 问题现象"></a>1.1 问题现象</h2><p>使用 Android Studio 运行 Flutter iOS 项目时，卡在：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">flutter: The Dart VM service is listening on http://0.0.0.0:50464/xxx</span><br></pre></td></tr></table></figure>
 
 <p>应用白屏，无法继续。但 Xcode 直接运行或命令行 <code>flutter run</code> 正常。</p>
@@ -781,707 +787,37 @@
 </tr>
 </tbody></table>
 
-      
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+          <div class="post-tags">
+              <a href="/tags/Flutter/" rel="tag"># Flutter</a>
+              <a href="/tags/Dart/" rel="tag"># Dart</a>
+              <a href="/tags/iOS/" rel="tag"># iOS</a>
+              <a href="/tags/%E8%B0%83%E8%AF%95/" rel="tag"># 调试</a>
+          </div>
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/17/Runtime%E5%AE%9E%E9%99%85%E5%BA%94%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/17/Runtime%E5%AE%9E%E9%99%85%E5%BA%94%E7%94%A8/" class="post-title-link" itemprop="url">【Runtime】实际应用</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-17 10:31:53" itemprop="dateCreated datePublished" datetime="2021-07-17T10:31:53+08:00">2021-07-17</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/1200-20220718113723807.png" alt="img"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/17/Runtime%E5%AE%9E%E9%99%85%E5%BA%94%E7%94%A8/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
         
-      
-    </div>
 
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/14/%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/14/%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81/" class="post-title-link" itemprop="url">【Runtime】消息发送机制，动态方法解析，消息转发机制</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-14 15:16:23" itemprop="dateCreated datePublished" datetime="2021-07-14T15:16:23+08:00">2021-07-14</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/1200-20220714151902097.png" alt="img"></p>
-<h3 id="序言"><a href="#序言" class="headerlink" title="序言"></a>序言</h3><p>读完这篇文章后，我们就可以弄明白“对象、类是怎么调用方法的”</p>
-<blockquote>
-<p>一、消息发送机制<code>objc_msgSend</code></p>
-<p>二、动态方法解析<code>resolveMethod</code></p>
-<p>三、消息转发机制<code>objc_msgForward</code></p>
-<p>四、程序崩溃<code>unrecognized selector sent to instance</code></p>
-<p>五、<code>super</code>关键字<code>objc_msgSendSuper</code></p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/14/%E6%B6%88%E6%81%AF%E5%8F%91%E9%80%81/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
         
-      
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/17/Runtime%E5%AE%9E%E9%99%85%E5%BA%94%E7%94%A8/" rel="prev" title="【Runtime】实际应用">
+      <i class="fa fa-chevron-left"></i> 【Runtime】实际应用
+    </a></div>
+      <div class="post-nav-item"></div>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
       </footer>
+    
   </article>
   
   
   
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/13/Runtime%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/13/Runtime%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F/" class="post-title-link" itemprop="url">【Runtime】Runtime是什么？</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-13 14:30:48" itemprop="dateCreated datePublished" datetime="2021-07-13T14:30:48+08:00">2021-07-13</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/1200-20220717183036199.png" alt="img"></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/13/Runtime%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/13/%E5%AF%B9%E8%B1%A1%E3%80%81%E7%B1%BB%E3%80%81%E5%85%83%E7%B1%BB%E3%80%81%E5%88%86%E7%B1%BB%E7%9A%84%E6%9C%AC%E8%B4%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/13/%E5%AF%B9%E8%B1%A1%E3%80%81%E7%B1%BB%E3%80%81%E5%85%83%E7%B1%BB%E3%80%81%E5%88%86%E7%B1%BB%E7%9A%84%E6%9C%AC%E8%B4%A8/" class="post-title-link" itemprop="url">【Runtime】对象、类、元类、分类的本质</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-13 09:31:03" itemprop="dateCreated datePublished" datetime="2021-07-13T09:31:03+08:00">2021-07-13</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/1200-20220713093308752.png" alt="img"></p>
-<h3 id="序言"><a href="#序言" class="headerlink" title="序言"></a>序言</h3><p>弄明白对象、类、元类内存里存储的是什么东西就行</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/13/%E5%AF%B9%E8%B1%A1%E3%80%81%E7%B1%BB%E3%80%81%E5%85%83%E7%B1%BB%E3%80%81%E5%88%86%E7%B1%BB%E7%9A%84%E6%9C%AC%E8%B4%A8/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/12/Runtime%EF%BC%9Aisa%E6%8C%87%E9%92%88%E5%92%8CsuperClass%E6%8C%87%E9%92%88%E7%9A%84%E6%8C%87%E5%90%91%EF%BC%8Cmethods%E3%80%81cache%E6%88%90%E5%91%98%E5%8F%98%E9%87%8F%E8%AF%A6%E8%A7%A3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/12/Runtime%EF%BC%9Aisa%E6%8C%87%E9%92%88%E5%92%8CsuperClass%E6%8C%87%E9%92%88%E7%9A%84%E6%8C%87%E5%90%91%EF%BC%8Cmethods%E3%80%81cache%E6%88%90%E5%91%98%E5%8F%98%E9%87%8F%E8%AF%A6%E8%A7%A3/" class="post-title-link" itemprop="url">【Runtime】isa指针和superClass指针的指向，methods、cache成员变量详解</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-12 20:12:53" itemprop="dateCreated datePublished" datetime="2021-07-12T20:12:53+08:00">2021-07-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/1200-20220713203040874.png" alt="img"></p>
-<blockquote>
-<p>一、对象、类、元类的<code>isa</code>指针和<code>superClass</code>指针指向讲解</p>
-<p>二、类、元类的<code>methods</code>成员变量详解</p>
-<p>三、类、元类的<code>cache</code>成员变量详解</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/12/Runtime%EF%BC%9Aisa%E6%8C%87%E9%92%88%E5%92%8CsuperClass%E6%8C%87%E9%92%88%E7%9A%84%E6%8C%87%E5%90%91%EF%BC%8Cmethods%E3%80%81cache%E6%88%90%E5%91%98%E5%8F%98%E9%87%8F%E8%AF%A6%E8%A7%A3/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/10/RunLoop/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/10/RunLoop/" class="post-title-link" itemprop="url">RunLoop</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-10 19:11:38" itemprop="dateCreated datePublished" datetime="2021-07-10T19:11:38+08:00">2021-07-10</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <blockquote>
-<p>一、RunLoop是什么</p>
-<p>二、RunLoop的底层实现</p>
-<p>​        1、RunLoop和线程是什么关系</p>
-<p>​        2、RunLoop的运行模式</p>
-<p>​        3、Source0事件源、Source1事件源、Observer、Timer事件源</p>
-<p>三、RunLoop的运行流程</p>
-<p>四、RunLoop的实际应用</p>
-<p>​        1、处理NSTimer不工作的问题</p>
-<p>​        2、常驻线程</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/10/RunLoop/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/07/05/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%BA%8C/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/07/05/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%BA%8C/" class="post-title-link" itemprop="url">内存管理二</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-07-05 17:32:38" itemprop="dateCreated datePublished" datetime="2021-07-05T17:32:38+08:00">2021-07-05</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <blockquote>
-<p>一、定时器的循环引入</p>
-<p>二、copy、mutableCopy</p>
-<p>三、创建大量autorelease对象时，最好自己创建一个@autoreleasepool {}</p>
-<p>四、其他注意事项</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/07/05/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%BA%8C/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/06/22/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%80/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/06/22/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%80/" class="post-title-link" itemprop="url">内存管理一</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-06-22 14:18:11" itemprop="dateCreated datePublished" datetime="2021-06-22T14:18:11+08:00">2021-06-22</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <blockquote>
-<p>一、iOS内存管理方式：</p>
-<p>​    1.Tagged Pointer：小对象的内存管理方式</p>
-<p>​    2.引用计数：普通对象的内存管理方式</p>
-<p>二、MRC介绍，需要开发工程师做哪些工作</p>
-<p>三、ARC介绍，编译器帮我们做了什么</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/06/22/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%80/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2021/06/07/%E7%90%86%E8%A7%A3%E6%8C%87%E9%92%88/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/06/07/%E7%90%86%E8%A7%A3%E6%8C%87%E9%92%88/" class="post-title-link" itemprop="url">理解指针</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2021-06-07 15:54:39" itemprop="dateCreated datePublished" datetime="2021-06-07T15:54:39+08:00">2021-06-07</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-12-26 18:26:11" itemprop="dateModified" datetime="2025-12-26T18:26:11+08:00">2025-12-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="一、引言："><a href="#一、引言：" class="headerlink" title="一、引言："></a>一、引言：</h3><p>日常开发中，我们经常遇到指针，同时指针也是C语言里极为重要的一个知识点，今天我们就来把它彻底弄明白。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/06/07/%E7%90%86%E8%A7%A3%E6%8C%87%E9%92%88/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
-  </nav>
 
 
 
@@ -1533,6 +869,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E9%97%AE%E9%A2%98%E8%83%8C%E6%99%AF%EF%BC%9AFlutter-iOS-%E8%B0%83%E8%AF%95%E8%BF%9E%E6%8E%A5%E5%A4%B1%E8%B4%A5"><span class="nav-number">1.</span> <span class="nav-text">一、问题背景：Flutter iOS 调试连接失败</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 问题现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-3-%E6%A0%B9%E6%9C%AC%E5%8E%9F%E5%9B%A0"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 根本原因</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-4-%E4%B8%BA%E4%BB%80%E4%B9%88-%E2%80%93no-start-paused-%E5%8F%8D%E8%80%8C%E8%83%BD%E6%88%90%E5%8A%9F%EF%BC%9F"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 为什么 –no-start-paused 反而能成功？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Dart-VM-%E8%AF%A6%E8%A7%A3"><span class="nav-number">2.</span> <span class="nav-text">二、Dart VM 详解</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-%E4%BB%80%E4%B9%88%E6%98%AF-Dart-VM"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 什么是 Dart VM</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Dart-VM-%E7%9A%84%E4%BD%8D%E7%BD%AE"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Dart VM 的位置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-Dart-VM-Service-%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 Dart VM Service 的作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-Dart-VM-%E7%9A%84%E6%A0%B8%E5%BF%83%E8%81%8C%E8%B4%A3"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 Dart VM 的核心职责</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E7%BC%96%E8%AF%91%E6%96%B9%E5%BC%8F%EF%BC%9AJIT-vs-AOT"><span class="nav-number">3.</span> <span class="nav-text">三、编译方式：JIT vs AOT</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-%E5%AE%9A%E4%B9%89"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 工作流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3-%E4%BC%98%E7%BC%BA%E7%82%B9%E5%AF%B9%E6%AF%94"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 优缺点对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-4-Flutter-%E7%9A%84%E5%BA%94%E7%94%A8"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 Flutter 的应用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%90%84%E5%B9%B3%E5%8F%B0%E8%BF%90%E8%A1%8C%E6%9C%BA%E5%88%B6%E5%AF%B9%E6%AF%94"><span class="nav-number">4.</span> <span class="nav-text">四、各平台运行机制对比</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-iOS"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 iOS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2-Android"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 Android</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3-Python"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 Python</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-4-Objective-C"><span class="nav-number">4.4.</span> <span class="nav-text">4.4 Objective-C</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%94%E3%80%81OC-Runtime-%E8%AF%A6%E8%A7%A3"><span class="nav-number">5.</span> <span class="nav-text">五、OC Runtime 详解</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#5-1-Runtime-%E6%89%A7%E8%A1%8C%E6%97%B6%E6%9C%BA"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 Runtime 执行时机</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-2-objc-msgSend-%E6%B5%81%E7%A8%8B"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 objc_msgSend 流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-3-%E6%B6%88%E6%81%AF%E8%BD%AC%E5%8F%91%E4%B8%89%E6%AD%A5%E6%9B%B2"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 消息转发三步曲</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-4-Runtime-%E8%83%BD%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">5.4.</span> <span class="nav-text">5.4 Runtime 能做什么？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%9D%99%E6%80%81%E8%AF%AD%E8%A8%80-vs-%E5%8A%A8%E6%80%81%E8%AF%AD%E8%A8%80"><span class="nav-number">6.</span> <span class="nav-text">六、静态语言 vs 动态语言</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#6-1-%E6%A0%B8%E5%BF%83%E5%8C%BA%E5%88%AB"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 核心区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-2-%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 代码示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-3-%E5%B8%B8%E8%A7%81%E8%AF%AD%E8%A8%80%E5%88%86%E7%B1%BB"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 常见语言分类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-4-%E4%BC%98%E7%BC%BA%E7%82%B9%E5%AF%B9%E6%AF%94"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 优缺点对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-5-OC-%E7%9A%84%E7%89%B9%E6%AE%8A%E6%80%A7"><span class="nav-number">6.5.</span> <span class="nav-text">6.5 OC 的特殊性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-6-%E7%8E%B0%E4%BB%A3%E8%B6%8B%E5%8A%BF%EF%BC%9A%E6%B8%90%E8%BF%9B%E5%BC%8F%E7%B1%BB%E5%9E%8B"><span class="nav-number">6.6.</span> <span class="nav-text">6.6 现代趋势：渐进式类型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%83%E3%80%81Xcode-%E8%BF%90%E8%A1%8C-vs-flutter-run-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">7.</span> <span class="nav-text">七、Xcode 运行 vs flutter run 的区别</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#7-1-%E5%AF%B9%E6%AF%94%E8%A1%A8"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 对比表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-2-Xcode-%E8%BF%90%E8%A1%8C%E6%97%B6-Flutter-%E4%BB%A3%E7%A0%81%E4%BB%8E%E5%93%AA%E6%9D%A5%EF%BC%9F"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 Xcode 运行时 Flutter 代码从哪来？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-3-%E6%B5%81%E7%A8%8B%E5%AF%B9%E6%AF%94"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 流程对比</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AB%E3%80%81Flutter-%E6%9E%B6%E6%9E%84%E4%B8%89%E5%B1%82%E7%BB%93%E6%9E%84"><span class="nav-number">8.</span> <span class="nav-text">八、Flutter 架构三层结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#8-1-%E6%9E%B6%E6%9E%84%E5%9B%BE"><span class="nav-number">8.1.</span> <span class="nav-text">8.1 架构图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-2-%E5%90%84%E5%B1%82%E7%BC%96%E8%AF%91%E6%96%B9%E5%BC%8F"><span class="nav-number">8.2.</span> <span class="nav-text">8.2 各层编译方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-3-Debug-%E6%A8%A1%E5%BC%8F%E8%AF%A6%E7%BB%86%E6%B5%81%E7%A8%8B"><span class="nav-number">8.3.</span> <span class="nav-text">8.3 Debug 模式详细流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-4-%E7%83%AD%E9%87%8D%E8%BD%BD%E6%B5%81%E7%A8%8B"><span class="nav-number">8.4.</span> <span class="nav-text">8.4 热重载流程</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93%E5%AF%B9%E6%AF%94%E8%A1%A8"><span class="nav-number">9.</span> <span class="nav-text">九、总结对比表</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#9-1-%E5%90%84%E5%B9%B3%E5%8F%B0%E8%99%9A%E6%8B%9F%E6%9C%BA-%E8%BF%90%E8%A1%8C%E6%97%B6"><span class="nav-number">9.1.</span> <span class="nav-text">9.1 各平台虚拟机&#x2F;运行时</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-2-%E8%AF%AD%E8%A8%80%E7%B1%BB%E5%9E%8B"><span class="nav-number">9.2.</span> <span class="nav-text">9.2 语言类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-3-%E7%BC%96%E8%AF%91%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94"><span class="nav-number">9.3.</span> <span class="nav-text">9.3 编译方式对比</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
