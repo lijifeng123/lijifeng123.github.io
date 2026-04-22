@@ -20,15 +20,15 @@
     var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="最近在做一个企业知识库问答系统，把整个过程记录下来，顺便把技术选型的思考也写出来，供参考。 为什么要做这个">
+  <meta name="description" content="最近在做一个企业知识库问答系统，把整个过程记录下来，顺便把技术选型的思考也写出来，供参考。 项目地址：rag-knowledge-base">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RAG 企业知识库问答系统设计">
 <meta property="og:url" content="https://lijifeng168.com/2026/04/22/RAG-%E4%BC%81%E4%B8%9A%E7%9F%A5%E8%AF%86%E5%BA%93%E9%97%AE%E7%AD%94%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/index.html">
 <meta property="og:site_name" content="个人技术生活分享">
-<meta property="og:description" content="最近在做一个企业知识库问答系统，把整个过程记录下来，顺便把技术选型的思考也写出来，供参考。 为什么要做这个">
+<meta property="og:description" content="最近在做一个企业知识库问答系统，把整个过程记录下来，顺便把技术选型的思考也写出来，供参考。 项目地址：rag-knowledge-base">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-04-21T16:00:00.000Z">
-<meta property="article:modified_time" content="2026-04-22T12:19:58.939Z">
+<meta property="article:modified_time" content="2026-04-22T12:29:57.134Z">
 <meta property="article:author" content="lijifeng">
 <meta property="article:tag" content="RAG">
 <meta property="article:tag" content="AI">
@@ -183,7 +183,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2026-04-22 00:00:00 / 修改时间：20:19:58" itemprop="dateCreated datePublished" datetime="2026-04-22T00:00:00+08:00">2026-04-22</time>
+              <time title="创建时间：2026-04-22 00:00:00 / 修改时间：20:29:57" itemprop="dateCreated datePublished" datetime="2026-04-22T00:00:00+08:00">2026-04-22</time>
             </span>
 
           
@@ -198,9 +198,10 @@
 
       
         <p>最近在做一个企业知识库问答系统，把整个过程记录下来，顺便把技术选型的思考也写出来，供参考。</p>
-<h2 id="为什么要做这个"><a href="#为什么要做这个" class="headerlink" title="为什么要做这个"></a>为什么要做这个</h2><span id="more"></span>
+<p>项目地址：<a target="_blank" rel="noopener" href="https://github.com/lijifeng123/ai_agent_learning_rag/tree/main/rag-knowledge-base">rag-knowledge-base</a></p>
+<span id="more"></span>
 
-<p>企业内部文档越来越多，PDF 规范、Word 合同、Markdown 文档，散落在各处。每次找东西都要翻半天，更别说跨文档综合查找了。于是想做一个能直接用自然语言提问的系统，上传文档后直接问”这个合同的付款条款是什么”，系统自动找到相关内容并给出答案。</p>
+<h2 id="为什么要做这个"><a href="#为什么要做这个" class="headerlink" title="为什么要做这个"></a>为什么要做这个</h2><p>企业内部文档越来越多，PDF 规范、Word 合同、Markdown 文档，散落在各处。每次找东西都要翻半天，更别说跨文档综合查找了。于是想做一个能直接用自然语言提问的系统，上传文档后直接问”这个合同的付款条款是什么”，系统自动找到相关内容并给出答案。</p>
 <p>这类系统的核心技术就是 <strong>RAG（Retrieval-Augmented Generation）</strong>，先检索再生成。</p>
 <h2 id="RAG-的基本原理"><a href="#RAG-的基本原理" class="headerlink" title="RAG 的基本原理"></a>RAG 的基本原理</h2><p>RAG 分两个阶段：</p>
 <p><strong>索引阶段</strong>（离线）</p>
@@ -218,19 +219,188 @@
 <li>LLM 基于这些上下文生成回答</li>
 </ol>
 <p>关键在于：LLM 不是凭空回答，而是”看着参考资料”回答，这样既能保证准确性，也能避免幻觉。</p>
-<h2 id="技术选型"><a href="#技术选型" class="headerlink" title="技术选型"></a>技术选型</h2><p>选型时面临几个决策点，这里说一下我的思路。</p>
-<p><strong>Embedding 模型：本地 vs API</strong></p>
-<p>本地用 <code>sentence-transformers</code>，API 用 OpenAI 或 Voyage。</p>
-<p>本地方案的好处是免费、数据不出去、延迟低；缺点是首次加载模型要等几秒。我选了本地，用 <code>paraphrase-multilingual-MiniLM-L12-v2</code>，支持中文，384 维向量，效果够用。</p>
-<p><strong>向量存储：FAISS vs 向量数据库</strong></p>
-<p>文档量不大的话，FAISS 就够了——纯本地文件，不需要起服务，查询速度也快。如果是生产环境、多用户并发，再考虑 Pinecone、Weaviate 这类。</p>
-<p><strong>LLM：Claude</strong></p>
-<p>直接用 Anthropic API，<code>claude-sonnet-4-6</code>，效果不错，中文理解也好。</p>
-<p><strong>界面：Streamlit</strong></p>
-<p>快速搭一个 Web 界面，Python 写，几十行代码就能跑起来。</p>
+<h2 id="技术选型方案对比"><a href="#技术选型方案对比" class="headerlink" title="技术选型方案对比"></a>技术选型方案对比</h2><h3 id="Embedding-模型"><a href="#Embedding-模型" class="headerlink" title="Embedding 模型"></a>Embedding 模型</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>代表选项</th>
+<th>优点</th>
+<th>缺点</th>
+<th>费用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本地模型</td>
+<td>sentence-transformers</td>
+<td>免费、数据不出去、无网络延迟</td>
+<td>首次加载慢、占用本地内存</td>
+<td>免费</td>
+</tr>
+<tr>
+<td>OpenAI API</td>
+<td>text-embedding-3-small</td>
+<td>效果好、无需本地资源</td>
+<td>数据上传第三方、有费用</td>
+<td>按 token 计费</td>
+</tr>
+<tr>
+<td>Voyage AI</td>
+<td>voyage-2</td>
+<td>检索效果优秀</td>
+<td>数据上传第三方、有费用</td>
+<td>按 token 计费</td>
+</tr>
+</tbody></table>
+<p><strong>本项目选择：sentence-transformers（<code>paraphrase-multilingual-MiniLM-L12-v2</code>）</strong></p>
+<p>理由：数据本地处理，适合对数据安全有要求的企业场景；支持中文，384 维向量，效果够用；完全免费。</p>
+<hr>
+<h3 id="向量存储"><a href="#向量存储" class="headerlink" title="向量存储"></a>向量存储</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>代表选项</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本地文件库</td>
+<td>FAISS</td>
+<td>纯本地、无需启动服务、零运维</td>
+<td>不支持并发写、不支持分布式</td>
+<td>单机、中小规模文档</td>
+</tr>
+<tr>
+<td>托管向量数据库</td>
+<td>Pinecone</td>
+<td>全托管、支持大规模</td>
+<td>有费用、数据在第三方</td>
+<td>生产环境、大规模</td>
+</tr>
+<tr>
+<td>自托管向量数据库</td>
+<td>Weaviate / Qdrant</td>
+<td>功能全、支持并发</td>
+<td>需要运维、部署复杂</td>
+<td>多用户、高并发场景</td>
+</tr>
+<tr>
+<td>传统数据库扩展</td>
+<td>pgvector（PostgreSQL）</td>
+<td>复用现有数据库</td>
+<td>性能不如专用向量库</td>
+<td>已有 PG 的项目</td>
+</tr>
+</tbody></table>
+<p><strong>本项目选择：FAISS</strong></p>
+<p>理由：文档量不大，单机部署，无需起额外服务；本地文件形式，简单直接，部署零成本。</p>
+<hr>
+<h3 id="LLM（大语言模型）"><a href="#LLM（大语言模型）" class="headerlink" title="LLM（大语言模型）"></a>LLM（大语言模型）</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>代表选项</th>
+<th>优点</th>
+<th>缺点</th>
+<th>费用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claude API</td>
+<td>claude-sonnet-4-6</td>
+<td>中文理解好、上下文长、指令遵循强</td>
+<td>需要 API Key</td>
+<td>按 token 计费</td>
+</tr>
+<tr>
+<td>OpenAI API</td>
+<td>GPT-4o</td>
+<td>生态成熟、插件丰富</td>
+<td>需要 API Key</td>
+<td>按 token 计费</td>
+</tr>
+<tr>
+<td>本地部署</td>
+<td>Ollama + Llama 3</td>
+<td>完全本地、数据不出去</td>
+<td>需要高配 GPU、效果弱于商业模型</td>
+<td>硬件成本</td>
+</tr>
+<tr>
+<td>国产模型</td>
+<td>通义千问、DeepSeek</td>
+<td>中文优化、国内访问稳定</td>
+<td>部分功能受限</td>
+<td>按 token 计费</td>
+</tr>
+</tbody></table>
+<p><strong>本项目选择：Claude API（claude-sonnet-4-6）</strong></p>
+<p>理由：中文理解和指令遵循效果好，回答质量稳定；长上下文窗口适合塞入多个检索片段。</p>
+<hr>
+<h3 id="RAG-实现方式"><a href="#RAG-实现方式" class="headerlink" title="RAG 实现方式"></a>RAG 实现方式</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>说明</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>手写 RAG</td>
+<td>自己实现各模块</td>
+<td>完全可控、无额外依赖、便于学习原理</td>
+<td>开发量稍大</td>
+</tr>
+<tr>
+<td>LangChain</td>
+<td>框架封装全流程</td>
+<td>文档丰富、快速上手</td>
+<td>抽象层多、调试复杂、版本变动频繁</td>
+</tr>
+<tr>
+<td>LlamaIndex</td>
+<td>专注于 RAG 场景</td>
+<td>RAG 功能完整</td>
+<td>学习曲线较陡、灵活性受限</td>
+</tr>
+</tbody></table>
+<p><strong>本项目选择：手写 RAG</strong></p>
+<p>理由：逻辑并不复杂，自己实现能完全掌控每个环节，也更便于理解 RAG 的原理。框架封装带来的便利，在这个规模下反而是负担。</p>
+<hr>
+<h3 id="Web-界面"><a href="#Web-界面" class="headerlink" title="Web 界面"></a>Web 界面</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>代表选项</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Streamlit</td>
+<td>streamlit</td>
+<td>Python 原生、几十行代码搞定</td>
+<td>界面定制性有限</td>
+</tr>
+<tr>
+<td>Gradio</td>
+<td>gradio</td>
+<td>适合 AI demo</td>
+<td>组件较少</td>
+</tr>
+<tr>
+<td>FastAPI + 前端</td>
+<td>FastAPI + React</td>
+<td>完全定制</td>
+<td>开发成本高</td>
+</tr>
+</tbody></table>
+<p><strong>本项目选择：Streamlit</strong></p>
+<p>理由：快速出可用界面，Python 写，和其他模块无缝集成，适合这种工具型项目。</p>
 <h2 id="系统架构"><a href="#系统架构" class="headerlink" title="系统架构"></a>系统架构</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">rag-knowledge-base/</span><br><span class="line">├── app.py                  # Streamlit 主界面</span><br><span class="line">├── config.py               # 全局配置</span><br><span class="line">├── indexer/</span><br><span class="line">│   ├── document_loader.py  # 文档解析（PDF/DOCX/TXT/URL）</span><br><span class="line">│   ├── text_splitter.py    # 文本切块</span><br><span class="line">│   └── embedder.py         # Embedding + FAISS 索引</span><br><span class="line">├── retriever/</span><br><span class="line">│   └── searcher.py         # 向量检索</span><br><span class="line">└── generator/</span><br><span class="line">    └── claude_client.py    # Claude API 调用</span><br></pre></td></tr></table></figure>
 
-<p>每个模块职责单一，比较好维护。</p>
 <h2 id="几个实现细节"><a href="#几个实现细节" class="headerlink" title="几个实现细节"></a>几个实现细节</h2><p><strong>切块大小怎么定</strong></p>
 <p>切块大小（chunk size）不是 Embedding 的标准，而是一个需要根据场景调的参数。太大了检索精度下降，太小了上下文不完整。我用的 512 字符、64 字符重叠，适合普通文档，密集技术文档可以适当调小。</p>
 <p>重叠的目的是避免关键信息刚好被切断在两个 chunk 的边界处。</p>
@@ -254,7 +424,7 @@
 <h2 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h2><p>支持上传 PDF、Word、TXT、Markdown，也能直接输入网页 URL。索引完成后就可以对话了，回答会附带参考来源，可以展开查看原文片段。</p>
 <p>本地跑，数据不出去，适合对数据安全有要求的场景。</p>
 <hr>
-<p>项目代码在 GitHub 上，感兴趣的可以拉下来跑跑看。</p>
+<p>完整代码：<a target="_blank" rel="noopener" href="https://github.com/lijifeng123/ai_agent_learning_rag/tree/main/rag-knowledge-base">https://github.com/lijifeng123/ai_agent_learning_rag/tree/main/rag-knowledge-base</a></p>
 
     </div>
 
@@ -337,7 +507,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%81%9A%E8%BF%99%E4%B8%AA"><span class="nav-number">1.</span> <span class="nav-text">为什么要做这个</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RAG-%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">RAG 的基本原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E9%80%89%E5%9E%8B"><span class="nav-number">3.</span> <span class="nav-text">技术选型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">系统架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="nav-number">5.</span> <span class="nav-text">几个实现细节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">6.</span> <span class="nav-text">踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">7.</span> <span class="nav-text">效果</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%81%9A%E8%BF%99%E4%B8%AA"><span class="nav-number">1.</span> <span class="nav-text">为什么要做这个</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RAG-%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">RAG 的基本原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E9%80%89%E5%9E%8B%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94"><span class="nav-number">3.</span> <span class="nav-text">技术选型方案对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Embedding-%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.1.</span> <span class="nav-text">Embedding 模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%91%E9%87%8F%E5%AD%98%E5%82%A8"><span class="nav-number">3.2.</span> <span class="nav-text">向量存储</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LLM%EF%BC%88%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%EF%BC%89"><span class="nav-number">3.3.</span> <span class="nav-text">LLM（大语言模型）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RAG-%E5%AE%9E%E7%8E%B0%E6%96%B9%E5%BC%8F"><span class="nav-number">3.4.</span> <span class="nav-text">RAG 实现方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Web-%E7%95%8C%E9%9D%A2"><span class="nav-number">3.5.</span> <span class="nav-text">Web 界面</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">系统架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="nav-number">5.</span> <span class="nav-text">几个实现细节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">6.</span> <span class="nav-text">踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C"><span class="nav-number">7.</span> <span class="nav-text">效果</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
