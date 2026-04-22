@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="《Death of Software. Nah.》文章深度解析 原文作者核心论点：软件不会消亡，反而会迎来前所未有的增长。 AI 改变的是”谁来构建”和”构建什么”，但不会减少需要构建的总量。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《Death of Software. Nah.》文章深度解析">
+<meta property="og:url" content="https://lijifeng168.com/2026/02/24/Death-of-Software-Nah%E6%96%87%E7%AB%A0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="《Death of Software. Nah.》文章深度解析 原文作者核心论点：软件不会消亡，反而会迎来前所未有的增长。 AI 改变的是”谁来构建”和”构建什么”，但不会减少需要构建的总量。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-02-24T07:05:18.000Z">
+<meta property="article:modified_time" content="2026-04-09T06:46:05.416Z">
+<meta property="article:author" content="lijifeng">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/02/24/Death-of-Software-Nah%E6%96%87%E7%AB%A0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>《Death of Software. Nah.》文章深度解析 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/02/24/Death-of-Software-Nah%E6%96%87%E7%AB%A0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          《Death of Software. Nah.》文章深度解析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-02-24 15:05:18" itemprop="dateCreated datePublished" datetime="2026-02-24T15:05:18+08:00">2026-02-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-04-09 14:46:05" itemprop="dateModified" datetime="2026-04-09T14:46:05+08:00">2026-04-09</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="《Death-of-Software-Nah-》文章深度解析"><a href="#《Death-of-Software-Nah-》文章深度解析" class="headerlink" title="《Death of Software. Nah.》文章深度解析"></a>《Death of Software. Nah.》文章深度解析</h1><blockquote>
+<p>原文作者核心论点：<strong>软件不会消亡，反而会迎来前所未有的增长。</strong> AI 改变的是”谁来构建”和”构建什么”，但不会减少需要构建的总量。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="一、核心论点"><a href="#一、核心论点" class="headerlink" title="一、核心论点"></a>一、核心论点</h2><p>当前对”软件已死”的论断，与历史上每一次技术转型中的末日预言如出一辙——过于乐观地估计了时间线，过于悲观地看待了现有产业。太多人急于奔向一个理论上的终局，将一段漫长的旅程误读为一个瞬间。</p>
+<hr>
+<h2 id="二、历史类比：三大转型案例"><a href="#二、历史类比：三大转型案例" class="headerlink" title="二、历史类比：三大转型案例"></a>二、历史类比：三大转型案例</h2><h3 id="1-PC-与图形界面转型"><a href="#1-PC-与图形界面转型" class="headerlink" title="1. PC 与图形界面转型"></a>1. PC 与图形界面转型</h3><table>
+<thead>
+<tr>
+<th>预言</th>
+<th>现实</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PC 将消灭大型机和数据中心</td>
+<td>数据中心不仅没消失，反而随 PC 增长而爆发式扩张</td>
+</tr>
+<tr>
+<td>图形界面将取代命令行（CLI）</td>
+<td>CLI 不仅没消亡，反而成为云计算、iPhone、Android 的底层架构</td>
+</tr>
+<tr>
+<td>旧世界将被彻底颠覆</td>
+<td>旧事物变得比任何人预想的都更庞大，同时催生了 Google、Meta、AWS 等全新巨头</td>
+</tr>
+</tbody></table>
+<p><strong>教训：人们以为会消亡的东西，最终往往变得更庞大；被认为会被永久替代的技术，反而成为新平台的关键支撑。</strong></p>
+<h3 id="2-零售业转型"><a href="#2-零售业转型" class="headerlink" title="2. 零售业转型"></a>2. 零售业转型</h3><table>
+<thead>
+<tr>
+<th>预言</th>
+<th>现实</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1995 年预言实体零售”即将死亡”</td>
+<td>沃尔玛通过”全渠道”战略成功转型，与 Amazon 并列为万亿级零售巨头</td>
+</tr>
+<tr>
+<td>电商将彻底取代线下</td>
+<td>零售业经历了和过去 100 年一样的业态演化周期</td>
+</tr>
+<tr>
+<td>转型是快速的</td>
+<td>实际转型时间跨越了整个职业生涯，至今仍在进行</td>
+</tr>
+</tbody></table>
+<p><strong>教训：转型时间远比预测的长；新旧巨头可以共存，各自以完全不同的方式称霸市场。</strong></p>
+<h3 id="3-媒体-流媒体转型"><a href="#3-媒体-流媒体转型" class="headerlink" title="3. 媒体/流媒体转型"></a>3. 媒体/流媒体转型</h3><table>
+<thead>
+<tr>
+<th>预言</th>
+<th>现实</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传统媒体将被彻底消灭</td>
+<td>主要公司找到了新方式继续做创意、可视化、叙事</td>
+</tr>
+<tr>
+<td>用户生成内容（UGC）将取代专业内容</td>
+<td>专业内容依然繁荣，且总量远超 25 年前</td>
+</tr>
+<tr>
+<td>一切将被浏览器颠覆</td>
+<td>Netflix 从 DVD 邮寄到流媒体，HBO 也加入，创意产出爆炸式增长</td>
+</tr>
+</tbody></table>
+<p><strong>教训：今天的媒体总量远超 25 年前；类别会变化、公司会更迭，但创造性破坏的过程是渐进式的，不是一夜之间。</strong></p>
+<hr>
+<h2 id="三、关于技术转型的共性规律"><a href="#三、关于技术转型的共性规律" class="headerlink" title="三、关于技术转型的共性规律"></a>三、关于技术转型的共性规律</h2><p>从三个案例中提炼出的普遍性规律：</p>
+<ol>
+<li><strong>时间线被严重低估</strong> — 几乎所有预测”全新世界”的人都对时间框架过于乐观</li>
+<li><strong>旧技术不会简单消亡</strong> — 它们往往以新形式继续存在，甚至成为新平台的基础设施</li>
+<li><strong>创造性破坏是渐进的</strong> — 不是一个”时刻”，而是一段漫长的”旅程”</li>
+<li><strong>新旧共存是常态</strong> — 新公司被创造，老公司转型，部分公司消亡（熊彼特式破坏）</li>
+<li><strong>两类人都不可或缺</strong> — 急于推动变革的乐观者和坚守现有系统的保守者，都在转型中发挥关键作用</li>
+</ol>
+<hr>
+<h2 id="四、对当下-AI-时代的五大预判"><a href="#四、对当下-AI-时代的五大预判" class="headerlink" title="四、对当下 AI 时代的五大预判"></a>四、对当下 AI 时代的五大预判</h2><h3 id="1-软件总量将前所未有地增长"><a href="#1-软件总量将前所未有地增长" class="headerlink" title="1. 软件总量将前所未有地增长"></a>1. 软件总量将前所未有地增长</h3><p>不仅因为 AI 编码或 Agent 构建产品，更因为软件能做的事远未被充分满足——个人使用、企业需求、组织管理、设备自动化，处处都需要更多的软件。</p>
+<h3 id="2-AI-是”产品栈的上移”，而非替代"><a href="#2-AI-是”产品栈的上移”，而非替代" class="headerlink" title="2. AI 是”产品栈的上移”，而非替代"></a>2. AI 是”产品栈的上移”，而非替代</h3><p>正如软件没有创造网上银行（银行业一直需要软件），AI 驱动的软件只是让产品栈变得更高、更复杂。行业将重组，资产将重新配置，但整体规模会更大、更复杂。</p>
+<h3 id="3-AI-将催生全新类别的工具"><a href="#3-AI-将催生全新类别的工具" class="headerlink" title="3. AI 将催生全新类别的工具"></a>3. AI 将催生全新类别的工具</h3><p>尚未被软件根本性改善的流程和体验，远多于已被改善的。从家庭自动化到工作协作，从交通运输到机器人自主系统，新发明的数量将是指数级的。</p>
+<h3 id="4-领域经验将变得空前重要"><a href="#4-领域经验将变得空前重要" class="headerlink" title="4. 领域经验将变得空前重要"></a>4. 领域经验将变得空前重要</h3><p>每个领域都将变得更复杂。工具的进步不仅赋能服务提供者，也赋能客户。历史反复证明：自动化不是减少从业者，而是要求更多人掌握更高技能。银行家、咨询师、设计师、律师、医生——每个领域都将重演这一过程。</p>
+<h3 id="5-有些公司会消亡，但节奏以代际为单位"><a href="#5-有些公司会消亡，但节奏以代际为单位" class="headerlink" title="5. 有些公司会消亡，但节奏以代际为单位"></a>5. 有些公司会消亡，但节奏以代际为单位</h3><p>变化是真实的，但不会发生在任何可预见的投资周期内。对比 2000 年和今天的零售、媒体、计算领域，变化深远但过程漫长。</p>
+<hr>
+<h2 id="五、核心思想汇总"><a href="#五、核心思想汇总" class="headerlink" title="五、核心思想汇总"></a>五、核心思想汇总</h2><blockquote>
+<p><strong>技术转型从来不是”旧世界的死亡”，而是”世界的扩大”。</strong></p>
+</blockquote>
+<p>每一次被预言为”终结”的技术变革，最终带来的都是更大的市场、更多的参与者、更复杂的产品，以及远超预期的转型时间。AI 时代也不例外。</p>
+<p>华尔街对”软件已死”的共识是短视的羊群效应。现实是：我们需要的软件比以往任何时候都多，领域知识比以往任何时候都重要，而这一切的展开将远比五年期预测所暗示的更漫长、更丰富。</p>
+<p><strong>这是商业和技术史上最激动人心的时代——但请系好安全带，因为旅程才刚刚开始。</strong></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/02/09/Flutter-debug-%E4%B8%8E%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80%E5%8E%9F%E7%90%86%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93/" rel="prev" title="Flutter debug 与编程语言原理知识总结">
+      <i class="fa fa-chevron-left"></i> Flutter debug 与编程语言原理知识总结
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/03/17/%E6%B5%81%E5%BC%8F%E7%94%9F%E6%88%90-UI-%E4%B8%8E-GenUI-%E6%A1%86%E6%9E%B6%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97%E4%BB%8E-A2UI-%E5%88%B0-Flutter-%E8%90%BD%E5%9C%B0/" rel="next" title="流式生成 UI 与 GenUI 框架完整指南：从 A2UI 到 Flutter 落地">
+      流式生成 UI 与 GenUI 框架完整指南：从 A2UI 到 Flutter 落地 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E3%80%8ADeath-of-Software-Nah-%E3%80%8B%E6%96%87%E7%AB%A0%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">《Death of Software. Nah.》文章深度解析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A0%B8%E5%BF%83%E8%AE%BA%E7%82%B9"><span class="nav-number">1.1.</span> <span class="nav-text">一、核心论点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%8E%86%E5%8F%B2%E7%B1%BB%E6%AF%94%EF%BC%9A%E4%B8%89%E5%A4%A7%E8%BD%AC%E5%9E%8B%E6%A1%88%E4%BE%8B"><span class="nav-number">1.2.</span> <span class="nav-text">二、历史类比：三大转型案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-PC-%E4%B8%8E%E5%9B%BE%E5%BD%A2%E7%95%8C%E9%9D%A2%E8%BD%AC%E5%9E%8B"><span class="nav-number">1.2.1.</span> <span class="nav-text">1. PC 与图形界面转型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E9%9B%B6%E5%94%AE%E4%B8%9A%E8%BD%AC%E5%9E%8B"><span class="nav-number">1.2.2.</span> <span class="nav-text">2. 零售业转型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%AA%92%E4%BD%93-%E6%B5%81%E5%AA%92%E4%BD%93%E8%BD%AC%E5%9E%8B"><span class="nav-number">1.2.3.</span> <span class="nav-text">3. 媒体&#x2F;流媒体转型</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%85%B3%E4%BA%8E%E6%8A%80%E6%9C%AF%E8%BD%AC%E5%9E%8B%E7%9A%84%E5%85%B1%E6%80%A7%E8%A7%84%E5%BE%8B"><span class="nav-number">1.3.</span> <span class="nav-text">三、关于技术转型的共性规律</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%AF%B9%E5%BD%93%E4%B8%8B-AI-%E6%97%B6%E4%BB%A3%E7%9A%84%E4%BA%94%E5%A4%A7%E9%A2%84%E5%88%A4"><span class="nav-number">1.4.</span> <span class="nav-text">四、对当下 AI 时代的五大预判</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E8%BD%AF%E4%BB%B6%E6%80%BB%E9%87%8F%E5%B0%86%E5%89%8D%E6%89%80%E6%9C%AA%E6%9C%89%E5%9C%B0%E5%A2%9E%E9%95%BF"><span class="nav-number">1.4.1.</span> <span class="nav-text">1. 软件总量将前所未有地增长</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-AI-%E6%98%AF%E2%80%9D%E4%BA%A7%E5%93%81%E6%A0%88%E7%9A%84%E4%B8%8A%E7%A7%BB%E2%80%9D%EF%BC%8C%E8%80%8C%E9%9D%9E%E6%9B%BF%E4%BB%A3"><span class="nav-number">1.4.2.</span> <span class="nav-text">2. AI 是”产品栈的上移”，而非替代</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-AI-%E5%B0%86%E5%82%AC%E7%94%9F%E5%85%A8%E6%96%B0%E7%B1%BB%E5%88%AB%E7%9A%84%E5%B7%A5%E5%85%B7"><span class="nav-number">1.4.3.</span> <span class="nav-text">3. AI 将催生全新类别的工具</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E9%A2%86%E5%9F%9F%E7%BB%8F%E9%AA%8C%E5%B0%86%E5%8F%98%E5%BE%97%E7%A9%BA%E5%89%8D%E9%87%8D%E8%A6%81"><span class="nav-number">1.4.4.</span> <span class="nav-text">4. 领域经验将变得空前重要</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-%E6%9C%89%E4%BA%9B%E5%85%AC%E5%8F%B8%E4%BC%9A%E6%B6%88%E4%BA%A1%EF%BC%8C%E4%BD%86%E8%8A%82%E5%A5%8F%E4%BB%A5%E4%BB%A3%E9%99%85%E4%B8%BA%E5%8D%95%E4%BD%8D"><span class="nav-number">1.4.5.</span> <span class="nav-text">5. 有些公司会消亡，但节奏以代际为单位</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3%E6%B1%87%E6%80%BB"><span class="nav-number">1.5.</span> <span class="nav-text">五、核心思想汇总</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

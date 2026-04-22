@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Claude Code 初探 一 深入拆解 Anthropic 官方 CLI 智能体的架构设计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Claude Code 初探 一">
+<meta property="og:url" content="https://lijifeng168.com/2026/04/02/Claude-Code-%E5%88%9D%E6%8E%A2-%E4%B8%80/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="Claude Code 初探 一 深入拆解 Anthropic 官方 CLI 智能体的架构设计">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-02T03:58:10.000Z">
+<meta property="article:modified_time" content="2026-04-09T06:46:05.415Z">
+<meta property="article:author" content="lijifeng">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/04/02/Claude-Code-%E5%88%9D%E6%8E%A2-%E4%B8%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Claude Code 初探 一 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/04/02/Claude-Code-%E5%88%9D%E6%8E%A2-%E4%B8%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Claude Code 初探 一
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-04-02 11:58:10" itemprop="dateCreated datePublished" datetime="2026-04-02T11:58:10+08:00">2026-04-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-04-09 14:46:05" itemprop="dateModified" datetime="2026-04-09T14:46:05+08:00">2026-04-09</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Claude-Code-初探-一"><a href="#Claude-Code-初探-一" class="headerlink" title="Claude Code 初探 一"></a>Claude Code 初探 一</h1><blockquote>
+<p>深入拆解 Anthropic 官方 CLI 智能体的架构设计</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Claude Code 是 Anthropic 推出的官方命令行 AI 编程助手。与普通的聊天式 AI 不同，它是一个真正的<strong>智能体（Agent）</strong>——能够自主规划、调用工具、读写文件、执行命令，并在终端中提供完整的交互式体验。</p>
+<p>本文基于对 Claude Code 还原版源码的深度阅读，从运行机制、系统提示词、工具调用、文件操作、网络能力、认证体系、TUI 渲染等多个维度，拆解其核心架构。</p>
+<hr>
+<h2 id="一、整体架构：两层循环"><a href="#一、整体架构：两层循环" class="headerlink" title="一、整体架构：两层循环"></a>一、整体架构：两层循环</h2><p>Claude Code 的运行时架构可以概括为<strong>两层循环</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────────┐</span><br><span class="line">│  外层：React 事件驱动 REPL                    │</span><br><span class="line">│  (useQueueProcessor → 等待用户输入)           │</span><br><span class="line">│                                              │</span><br><span class="line">│   ┌───────────────────────────────────────┐  │</span><br><span class="line">│   │  内层：queryLoop while(true)          │  │</span><br><span class="line">│   │  (发送消息 → 模型推理 → 工具调用 →     │  │</span><br><span class="line">│   │   追加结果 → 继续循环)                 │  │</span><br><span class="line">│   └───────────────────────────────────────┘  │</span><br><span class="line">└─────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="外层-REPL"><a href="#外层-REPL" class="headerlink" title="外层 REPL"></a>外层 REPL</h3><p>基于 React Hook 的事件驱动循环，代码位于 <code>src/hooks/useQueueProcessor.ts</code>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 当没有活跃查询 + 队列有待处理命令时触发</span></span><br><span class="line"><span class="title function_">useEffect</span>(<span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="keyword">if</span> (isQueryActive) <span class="keyword">return</span></span><br><span class="line">  <span class="keyword">if</span> (hasActiveLocalJsxUI) <span class="keyword">return</span></span><br><span class="line">  <span class="keyword">if</span> (queueSnapshot.<span class="property">length</span> === <span class="number">0</span>) <span class="keyword">return</span></span><br><span class="line">  <span class="title function_">processQueueIfReady</span>(&#123; <span class="attr">executeInput</span>: executeQueuedInput &#125;)</span><br><span class="line">&#125;, [queueSnapshot, isQueryActive, ...])</span><br></pre></td></tr></table></figure>
+
+<p>它不是传统的 <code>while(true)</code>，而是 React 的 <code>useSyncExternalStore</code> + <code>useEffect</code> 响应式模型——队列变化或查询状态变化时自动触发。</p>
+<h3 id="内层-queryLoop"><a href="#内层-queryLoop" class="headerlink" title="内层 queryLoop"></a>内层 queryLoop</h3><p>真正的智能体循环，位于 <code>src/query.ts</code> 第 241 行：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">  <span class="comment">// 1. 调用 Claude API</span></span><br><span class="line">  <span class="keyword">const</span> response = <span class="keyword">await</span> api.<span class="property">messages</span>.<span class="title function_">create</span>(&#123; messages, tools, ... &#125;)</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 2. 检测是否有工具调用</span></span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">const</span> block <span class="keyword">of</span> response.<span class="property">content</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (block.<span class="property">type</span> === <span class="string">&#x27;tool_use&#x27;</span>) &#123;</span><br><span class="line">      needsFollowUp = <span class="literal">true</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 3. 执行工具，获取结果</span></span><br><span class="line">  <span class="keyword">const</span> toolResults = <span class="keyword">await</span> <span class="title function_">executeTools</span>(toolUseBlocks)</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 4. 追加到消息列表，继续循环</span></span><br><span class="line">  messages = [...messages, ...assistantMessages, ...toolResults]</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// 5. 没有工具调用时退出</span></span><br><span class="line">  <span class="keyword">if</span> (!needsFollowUp) <span class="keyword">break</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关键点：<strong>模型不返回工具调用时循环才结束</strong>。一次用户提问可能触发数十轮工具调用。</p>
+<hr>
+<h2 id="二、系统提示词：智能体的”宪法”"><a href="#二、系统提示词：智能体的”宪法”" class="headerlink" title="二、系统提示词：智能体的”宪法”"></a>二、系统提示词：智能体的”宪法”</h2><p>系统提示词的构建位于 <code>src/constants/prompts.ts</code>，由多个部分拼接而成：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>身份声明</td>
+<td>“你是 Claude，由 Anthropic 创建”</td>
+</tr>
+<tr>
+<td>工具使用规范</td>
+<td>每个工具的使用场景和注意事项</td>
+</tr>
+<tr>
+<td>安全边界</td>
+<td>文件操作安全、命令执行限制</td>
+</tr>
+<tr>
+<td>输出格式</td>
+<td>Markdown 格式、简洁风格要求</td>
+</tr>
+<tr>
+<td>环境信息</td>
+<td>操作系统、shell 类型、工作目录</td>
+</tr>
+<tr>
+<td>动态上下文</td>
+<td>CLAUDE.md 内容、用户偏好</td>
+</tr>
+</tbody></table>
+<p>提示词中有一个重要的分界线 <code>SYSTEM_PROMPT_DYNAMIC_BOUNDARY</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[静态内容 - 可被 API 缓存] ← 节省 token 费用</span><br><span class="line">────────── 分界线 ──────────</span><br><span class="line">[动态内容 - 每次请求变化] ← 环境信息、时间等</span><br></pre></td></tr></table></figure>
+
+<p>这是一个精巧的成本优化设计——静态部分利用 Anthropic API 的 prompt caching 特性，避免重复计费。</p>
+<hr>
+<h2 id="三、工具调用：从文本到函数"><a href="#三、工具调用：从文本到函数" class="headerlink" title="三、工具调用：从文本到函数"></a>三、工具调用：从文本到函数</h2><p>这是 Claude Code 最核心的能力。整个流程如下：</p>
+<h3 id="3-1-工具注册"><a href="#3-1-工具注册" class="headerlink" title="3.1 工具注册"></a>3.1 工具注册</h3><p>每个工具用 Zod Schema 定义输入参数，启动时通过 <code>zodToJsonSchema()</code> 转换为 JSON Schema，随 API 请求发送给模型：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/utils/api.ts</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">toolToAPISchema</span>(<span class="params">tool</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> &#123;</span><br><span class="line">    <span class="attr">name</span>: tool.<span class="property">name</span>,</span><br><span class="line">    <span class="attr">description</span>: tool.<span class="property">description</span>,</span><br><span class="line">    <span class="attr">input_schema</span>: <span class="title function_">zodToJsonSchema</span>(tool.<span class="property">inputSchema</span>)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-模型返回结构化调用"><a href="#3-2-模型返回结构化调用" class="headerlink" title="3.2 模型返回结构化调用"></a>3.2 模型返回结构化调用</h3><p>Claude 模型返回的不是纯文本，而是结构化的 JSON：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;tool_use&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;toolu_01A09q90qw90lq917835lq9&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Read&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;input&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;file_path&quot;</span><span class="punctuation">:</span> <span class="string">&quot;/src/index.ts&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;offset&quot;</span><span class="punctuation">:</span> <span class="number">0</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;limit&quot;</span><span class="punctuation">:</span> <span class="number">100</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>重要</strong>：这是 Anthropic 模型训练层面的能力，不是 prompt engineering 的结果。模型在预训练和 RLHF 阶段就学会了生成符合 JSON Schema 的结构化输出。这也是为什么 Claude Code 只支持 Claude 模型——其他厂商的模型不一定具备相同的工具调用协议。</p>
+</blockquote>
+<h3 id="3-3-客户端派发执行"><a href="#3-3-客户端派发执行" class="headerlink" title="3.3 客户端派发执行"></a>3.3 客户端派发执行</h3><p><code>src/services/tools/toolExecution.ts</code> 负责将模型的结构化输出转为实际的函数调用：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 第 337 行</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">runToolUse</span>(<span class="params">toolUse, tools, ...</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> tool = tools.<span class="title function_">find</span>(<span class="function"><span class="params">t</span> =&gt;</span> t.<span class="property">name</span> === toolUse.<span class="property">name</span>)  <span class="comment">// 按名称匹配</span></span><br><span class="line">  <span class="keyword">const</span> validatedInput = tool.<span class="property">inputSchema</span>.<span class="title function_">parse</span>(toolUse.<span class="property">input</span>)  <span class="comment">// Zod 校验</span></span><br><span class="line">  <span class="keyword">const</span> result = <span class="keyword">await</span> tool.<span class="title function_">call</span>(validatedInput, ...)  <span class="comment">// 执行！</span></span><br><span class="line">  <span class="keyword">return</span> result</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-流式并发执行"><a href="#3-4-流式并发执行" class="headerlink" title="3.4 流式并发执行"></a>3.4 流式并发执行</h3><p><code>StreamingToolExecutor</code> 更进一步——在模型<strong>还在流式输出</strong>时就开始执行已解析完的工具：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/services/tools/StreamingToolExecutor.ts</span></span><br><span class="line"><span class="title function_">addTool</span>(<span class="params">toolUse</span>) &#123;</span><br><span class="line">  <span class="variable language_">this</span>.<span class="property">queue</span>.<span class="title function_">push</span>(toolUse)</span><br><span class="line">  <span class="variable language_">this</span>.<span class="title function_">processQueue</span>()  <span class="comment">// 立即开始执行，不等模型输出完</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、文件操作：两条路径"><a href="#四、文件操作：两条路径" class="headerlink" title="四、文件操作：两条路径"></a>四、文件操作：两条路径</h2><p>Claude Code 操作文件有两种方式：</p>
+<h3 id="路径一：Node-js-fs-模块（直接操作）"><a href="#路径一：Node-js-fs-模块（直接操作）" class="headerlink" title="路径一：Node.js fs 模块（直接操作）"></a>路径一：Node.js fs 模块（直接操作）</h3><p>用于 Read、Write、Edit 等文件工具：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">FileWriteTool.call()</span><br><span class="line">  → writeTextContent()</span><br><span class="line">    → fs.writeFileSync(tempPath, content)  // 先写临时文件</span><br><span class="line">    → fs.renameSync(tempPath, targetPath)  // 原子重命名</span><br></pre></td></tr></table></figure>
+
+<p>原子写入设计保证了<strong>崩溃安全</strong>——即使写入过程中断电，原文件也不会损坏。</p>
+<h3 id="路径二：child-process-spawn（Shell-命令）"><a href="#路径二：child-process-spawn（Shell-命令）" class="headerlink" title="路径二：child_process.spawn（Shell 命令）"></a>路径二：child_process.spawn（Shell 命令）</h3><p>用于 Bash 工具，执行任意终端命令：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/utils/Shell.ts</span></span><br><span class="line"><span class="keyword">const</span> childProcess = <span class="title function_">spawn</span>(spawnBinary, shellArgs, &#123; env, cwd &#125;)</span><br></pre></td></tr></table></figure>
+
+<p><code>spawn</code> 创建的是独立子进程，直接调用操作系统的 shell（如 <code>/bin/zsh</code>），可以执行 <code>git</code>、<code>npm</code>、<code>curl</code> 等任何命令。</p>
+<blockquote>
+<p><code>spawn</code> 和 <code>fs</code> 是完全不同的机制：<code>fs</code> 是 Node.js 直接调用内核系统调用（如 <code>write(2)</code>），而 <code>spawn</code> 是创建一个新的 shell 进程来执行命令。</p>
+</blockquote>
+<hr>
+<h2 id="五、网络能力"><a href="#五、网络能力" class="headerlink" title="五、网络能力"></a>五、网络能力</h2><h3 id="WebFetch（网页抓取）"><a href="#WebFetch（网页抓取）" class="headerlink" title="WebFetch（网页抓取）"></a>WebFetch（网页抓取）</h3><p>使用 <code>axios.get()</code> 发送 HTTP 请求，并有域名黑名单机制：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 先检查域名是否被封禁</span></span><br><span class="line"><span class="keyword">const</span> domainInfo = <span class="keyword">await</span> api.<span class="property">anthropic</span>.<span class="property">com</span>/api/web/domain_info</span><br><span class="line"><span class="keyword">if</span> (domainInfo.<span class="property">blocked</span>) <span class="keyword">throw</span> <span class="title class_">Error</span>(<span class="string">&#x27;Domain blocked&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 然后抓取</span></span><br><span class="line"><span class="keyword">const</span> response = <span class="keyword">await</span> axios.<span class="title function_">get</span>(url)</span><br></pre></td></tr></table></figure>
+
+<h3 id="WebSearch（网页搜索）"><a href="#WebSearch（网页搜索）" class="headerlink" title="WebSearch（网页搜索）"></a>WebSearch（网页搜索）</h3><p>这个并非本地实现，而是利用 Anthropic API 的<strong>服务端工具</strong>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 发送给 API 的工具定义</span></span><br><span class="line">&#123; <span class="attr">type</span>: <span class="string">&quot;web_search_20250305&quot;</span> &#125;  <span class="comment">// 服务端工具标识</span></span><br></pre></td></tr></table></figure>
+
+<p>搜索由 Anthropic 后端执行，结果通过 API 返回。客户端只负责展示。</p>
+<hr>
+<h2 id="六、认证与安全"><a href="#六、认证与安全" class="headerlink" title="六、认证与安全"></a>六、认证与安全</h2><h3 id="认证方式"><a href="#认证方式" class="headerlink" title="认证方式"></a>认证方式</h3><p>Claude Code 支持两种认证：</p>
+<ol>
+<li><strong>OAuth 登录</strong>：通过 <code>claude.ai</code> 网页授权，Token 存储在 macOS Keychain</li>
+<li><strong>API Key</strong>：直接配置 <code>ANTHROPIC_API_KEY</code> 环境变量</li>
+</ol>
+<p>优先级链（<code>src/utils/auth.ts</code>）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">环境变量 ANTHROPIC_AUTH_TOKEN</span><br><span class="line">  → OAuth 存储的 Token</span><br><span class="line">    → 环境变量 ANTHROPIC_API_KEY</span><br><span class="line">      → Keychain 存储的 API Key</span><br><span class="line">        → 配置文件中的 Key</span><br></pre></td></tr></table></figure>
+
+<h3 id="每次请求校验"><a href="#每次请求校验" class="headerlink" title="每次请求校验"></a>每次请求校验</h3><p>认证信息<strong>不在本地校验</strong>——每次 API 请求都携带 Token/Key，由 Anthropic 后端验证：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/services/api/client.ts</span></span><br><span class="line"><span class="keyword">const</span> client = <span class="keyword">new</span> <span class="title class_">Anthropic</span>(&#123;</span><br><span class="line">  <span class="attr">apiKey</span>: apiKey,</span><br><span class="line">  <span class="attr">authToken</span>: oauthToken,  <span class="comment">// 二选一</span></span><br><span class="line">&#125;)</span><br><span class="line"><span class="comment">// 每次 messages.create() 都会在 Header 中携带认证信息</span></span><br></pre></td></tr></table></figure>
+
+<p>后端负责：身份验证、速率限制、用量计费、安全审计、模型推理。</p>
+<hr>
+<h2 id="七、TUI-渲染：终端里的-React"><a href="#七、TUI-渲染：终端里的-React" class="headerlink" title="七、TUI 渲染：终端里的 React"></a>七、TUI 渲染：终端里的 React</h2><p>Claude Code 的终端界面不是简单的 <code>console.log</code>，而是一个完整的 <strong>React 渲染引擎</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">React JSX 组件</span><br><span class="line">    ↓ react-reconciler</span><br><span class="line">自定义 DOM 节点</span><br><span class="line">    ↓ Yoga Layout</span><br><span class="line">Flexbox 布局计算</span><br><span class="line">    ↓ 字符矩阵</span><br><span class="line">屏幕缓冲区</span><br><span class="line">    ↓ Diff 算法</span><br><span class="line">ANSI 转义序列 → 终端</span><br></pre></td></tr></table></figure>
+
+<h3 id="关键实现"><a href="#关键实现" class="headerlink" title="关键实现"></a>关键实现</h3><ul>
+<li><strong>自定义 Ink 引擎</strong>（<code>src/ink/</code>）：fork 自开源 Ink，深度定制</li>
+<li><strong>React Reconciler</strong>（<code>src/ink/reconciler.ts</code>）：将 JSX 桥接到自定义 DOM</li>
+<li><strong>Yoga 布局</strong>：Facebook 的 Flexbox 布局引擎，计算每个元素的终端位置</li>
+<li><strong>Diff 渲染</strong>：维护两帧缓冲区，只重绘变化的字符，避免闪烁</li>
+<li><strong>16ms 渲染循环</strong>：约 60fps 的刷新率</li>
+</ul>
+<p>组件体系：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">App (顶层容器)</span><br><span class="line">  └── REPL (主屏幕)</span><br><span class="line">       ├── MessageHistory (消息列表)</span><br><span class="line">       ├── PromptInput (输入框)</span><br><span class="line">       ├── PermissionDialog (权限弹窗)</span><br><span class="line">       ├── StatusBar (状态栏)</span><br><span class="line">       └── ToolRenderer (工具执行渲染)</span><br></pre></td></tr></table></figure>
+
+<p>共 148 个组件文件，位于 <code>src/components/</code>。</p>
+<hr>
+<h2 id="八、上下文管理"><a href="#八、上下文管理" class="headerlink" title="八、上下文管理"></a>八、上下文管理</h2><h3 id="跨任务上下文持久化"><a href="#跨任务上下文持久化" class="headerlink" title="跨任务上下文持久化"></a>跨任务上下文持久化</h3><p><code>QueryEngine</code> 维护一个 <code>mutableMessages</code> 数组，贯穿整个会话：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/QueryEngine.ts</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">QueryEngine</span> &#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="attr">mutableMessages</span>: <span class="title class_">Message</span>[] = []</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">async</span> <span class="title function_">submitMessage</span>(<span class="params">input</span>) &#123;</span><br><span class="line">    <span class="comment">// 新消息追加到数组</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">mutableMessages</span>.<span class="title function_">push</span>(userMessage)</span><br><span class="line">    <span class="comment">// 调用 query，传入完整历史</span></span><br><span class="line">    <span class="keyword">await</span> <span class="title function_">query</span>(&#123; <span class="attr">messages</span>: <span class="variable language_">this</span>.<span class="property">mutableMessages</span>, ... &#125;)</span><br><span class="line">    <span class="comment">// 模型回复也追加进去</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">mutableMessages</span>.<span class="title function_">push</span>(...assistantMessages)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>任务 A 的对话历史对任务 B <strong>完全可见</strong>。</p>
+<h3 id="上下文压缩"><a href="#上下文压缩" class="headerlink" title="上下文压缩"></a>上下文压缩</h3><p>当消息接近上下文窗口限制时，自动触发压缩——用模型总结早期对话，替换原始消息，释放空间。</p>
+<hr>
+<h2 id="九、Skill-系统：可扩展的能力"><a href="#九、Skill-系统：可扩展的能力" class="headerlink" title="九、Skill 系统：可扩展的能力"></a>九、Skill 系统：可扩展的能力</h2><p>Skill 本质上是<strong>预定义的提示词模板 + 工具权限集</strong>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 技能执行流程</span></span><br><span class="line"><span class="title class_">SkillTool</span>.<span class="title function_">call</span>(<span class="string">&quot;commit&quot;</span>)</span><br><span class="line">  → 加载 skill 定义</span><br><span class="line">  → 生成提示词 (<span class="title class_">ContentBlockParam</span>[])</span><br><span class="line">  → 注入为 <span class="title class_">UserMessage</span>（模型以为是用户说的）</span><br><span class="line">  → contextModifier 自动授权相关工具</span><br><span class="line">  → 模型自主执行</span><br></pre></td></tr></table></figure>
+
+<p>例如 <code>simplify</code> 技能会启动 3 个并行的子智能体进行代码审查；<code>commit</code> 技能会引导模型完成 git 提交流程。</p>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Claude Code 的架构可以用一句话概括：</p>
+<blockquote>
+<p><strong>一个以 Claude 模型为大脑、以结构化工具调用为手脚、以 React 终端引擎为面孔的自主智能体。</strong></p>
+</blockquote>
+<p>核心设计亮点：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自主决策</td>
+<td>queryLoop while(true) + 模型驱动的工具调用</td>
+</tr>
+<tr>
+<td>安全写入</td>
+<td>临时文件 + 原子重命名</td>
+</tr>
+<tr>
+<td>流式执行</td>
+<td>StreamingToolExecutor 边接收边执行</td>
+</tr>
+<tr>
+<td>高效渲染</td>
+<td>React + Yoga + Diff 的终端渲染管线</td>
+</tr>
+<tr>
+<td>成本优化</td>
+<td>Prompt Caching 分界线设计</td>
+</tr>
+<tr>
+<td>上下文连续</td>
+<td>mutableMessages 跨任务持久化</td>
+</tr>
+</tbody></table>
+<p>在下一篇中，我们将继续探索 MCP 协议实现、多智能体协调、以及 Claude Code 的插件扩展机制。</p>
+<hr>
+<p><em>本文基于 Claude Code 还原版源码（版本 999.0.0-restored）的实际代码分析，非逆向工程。</em></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/03/17/%E6%B5%81%E5%BC%8F%E7%94%9F%E6%88%90-UI-%E4%B8%8E-GenUI-%E6%A1%86%E6%9E%B6%E5%AE%8C%E6%95%B4%E6%8C%87%E5%8D%97%E4%BB%8E-A2UI-%E5%88%B0-Flutter-%E8%90%BD%E5%9C%B0/" rel="prev" title="流式生成 UI 与 GenUI 框架完整指南：从 A2UI 到 Flutter 落地">
+      <i class="fa fa-chevron-left"></i> 流式生成 UI 与 GenUI 框架完整指南：从 A2UI 到 Flutter 落地
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/04/11/%E6%95%B0%E6%99%BA%E8%AE%BA/" rel="next" title="数智论">
+      数智论 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Claude-Code-%E5%88%9D%E6%8E%A2-%E4%B8%80"><span class="nav-number">1.</span> <span class="nav-text">Claude Code 初探 一</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%EF%BC%9A%E4%B8%A4%E5%B1%82%E5%BE%AA%E7%8E%AF"><span class="nav-number">1.2.</span> <span class="nav-text">一、整体架构：两层循环</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%96%E5%B1%82-REPL"><span class="nav-number">1.2.1.</span> <span class="nav-text">外层 REPL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%B1%82-queryLoop"><span class="nav-number">1.2.2.</span> <span class="nav-text">内层 queryLoop</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%EF%BC%9A%E6%99%BA%E8%83%BD%E4%BD%93%E7%9A%84%E2%80%9D%E5%AE%AA%E6%B3%95%E2%80%9D"><span class="nav-number">1.3.</span> <span class="nav-text">二、系统提示词：智能体的”宪法”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8%EF%BC%9A%E4%BB%8E%E6%96%87%E6%9C%AC%E5%88%B0%E5%87%BD%E6%95%B0"><span class="nav-number">1.4.</span> <span class="nav-text">三、工具调用：从文本到函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%B7%A5%E5%85%B7%E6%B3%A8%E5%86%8C"><span class="nav-number">1.4.1.</span> <span class="nav-text">3.1 工具注册</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%A8%A1%E5%9E%8B%E8%BF%94%E5%9B%9E%E7%BB%93%E6%9E%84%E5%8C%96%E8%B0%83%E7%94%A8"><span class="nav-number">1.4.2.</span> <span class="nav-text">3.2 模型返回结构化调用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B4%BE%E5%8F%91%E6%89%A7%E8%A1%8C"><span class="nav-number">1.4.3.</span> <span class="nav-text">3.3 客户端派发执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%B5%81%E5%BC%8F%E5%B9%B6%E5%8F%91%E6%89%A7%E8%A1%8C"><span class="nav-number">1.4.4.</span> <span class="nav-text">3.4 流式并发执行</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%EF%BC%9A%E4%B8%A4%E6%9D%A1%E8%B7%AF%E5%BE%84"><span class="nav-number">1.5.</span> <span class="nav-text">四、文件操作：两条路径</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%AF%E5%BE%84%E4%B8%80%EF%BC%9ANode-js-fs-%E6%A8%A1%E5%9D%97%EF%BC%88%E7%9B%B4%E6%8E%A5%E6%93%8D%E4%BD%9C%EF%BC%89"><span class="nav-number">1.5.1.</span> <span class="nav-text">路径一：Node.js fs 模块（直接操作）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%AF%E5%BE%84%E4%BA%8C%EF%BC%9Achild-process-spawn%EF%BC%88Shell-%E5%91%BD%E4%BB%A4%EF%BC%89"><span class="nav-number">1.5.2.</span> <span class="nav-text">路径二：child_process.spawn（Shell 命令）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E7%BD%91%E7%BB%9C%E8%83%BD%E5%8A%9B"><span class="nav-number">1.6.</span> <span class="nav-text">五、网络能力</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#WebFetch%EF%BC%88%E7%BD%91%E9%A1%B5%E6%8A%93%E5%8F%96%EF%BC%89"><span class="nav-number">1.6.1.</span> <span class="nav-text">WebFetch（网页抓取）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WebSearch%EF%BC%88%E7%BD%91%E9%A1%B5%E6%90%9C%E7%B4%A2%EF%BC%89"><span class="nav-number">1.6.2.</span> <span class="nav-text">WebSearch（网页搜索）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E8%AE%A4%E8%AF%81%E4%B8%8E%E5%AE%89%E5%85%A8"><span class="nav-number">1.7.</span> <span class="nav-text">六、认证与安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A4%E8%AF%81%E6%96%B9%E5%BC%8F"><span class="nav-number">1.7.1.</span> <span class="nav-text">认证方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AF%8F%E6%AC%A1%E8%AF%B7%E6%B1%82%E6%A0%A1%E9%AA%8C"><span class="nav-number">1.7.2.</span> <span class="nav-text">每次请求校验</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81TUI-%E6%B8%B2%E6%9F%93%EF%BC%9A%E7%BB%88%E7%AB%AF%E9%87%8C%E7%9A%84-React"><span class="nav-number">1.8.</span> <span class="nav-text">七、TUI 渲染：终端里的 React</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.8.1.</span> <span class="nav-text">关键实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E4%B8%8A%E4%B8%8B%E6%96%87%E7%AE%A1%E7%90%86"><span class="nav-number">1.9.</span> <span class="nav-text">八、上下文管理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%A8%E4%BB%BB%E5%8A%A1%E4%B8%8A%E4%B8%8B%E6%96%87%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.9.1.</span> <span class="nav-text">跨任务上下文持久化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9"><span class="nav-number">1.9.2.</span> <span class="nav-text">上下文压缩</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81Skill-%E7%B3%BB%E7%BB%9F%EF%BC%9A%E5%8F%AF%E6%89%A9%E5%B1%95%E7%9A%84%E8%83%BD%E5%8A%9B"><span class="nav-number">1.10.</span> <span class="nav-text">九、Skill 系统：可扩展的能力</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">1.11.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
