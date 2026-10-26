@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="背景内测包要有地方发。原来走 fir，但 fir 的下载页靠 UA 正则判断设备，而 iPadOS 13 之后默认「请求桌面网站」，UA 会报成 Macintosh——fir 判不出是 iOS，直接把下载按钮藏了，部分 iPad 根本装不了包。这个问题在第三方侧、改不动。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 内测包的内网 OTA 分发与 JP 重签支持">
+<meta property="og:url" content="https://lijifeng168.com/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="背景内测包要有地方发。原来走 fir，但 fir 的下载页靠 UA 正则判断设备，而 iPadOS 13 之后默认「请求桌面网站」，UA 会报成 Macintosh——fir 判不出是 iOS，直接把下载按钮藏了，部分 iPad 根本装不了包。这个问题在第三方侧、改不动。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T15:55:00.000Z">
+<meta property="article:modified_time" content="2026-10-26T15:38:07.220Z">
+<meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="iOS、OTA、itms-services、nginx、Python">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>iOS 内测包的内网 OTA 分发与 JP 重签支持 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          iOS 内测包的内网 OTA 分发与 JP 重签支持
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-26 23:55:00 / 修改时间：23:38:07" itemprop="dateCreated datePublished" datetime="2026-10-26T23:55:00+08:00">2026-10-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>内测包要有地方发。原来走 fir，但 fir 的下载页靠 <strong>UA 正则</strong>判断设备，而 iPadOS 13 之后默认「请求桌面网站」，UA 会报成 <code>Macintosh</code>——fir 判不出是 iOS，直接把下载按钮藏了，部分 iPad 根本装不了包。这个问题在第三方侧、改不动。</p>
+<span id="more"></span>
+
+<p>于是在打包机上另搭了一条内网 OTA 通道：nginx 直出静态安装页，页面不做任何 UA 判断，安装按钮永远显示。附带好处是走内网直连，实测 100M 的包 5 秒下完（约 19.6 MB/s）。</p>
+<p>同一套 nginx 下还挂了一个服务，解决另一个问题：日本客户用自有证书重签 JP 包时，包里的 Widget 会碍事，需要一个「点一下就去掉 Widget」的页面。</p>
+<h2 id="安装机制：itms-services-与-manifest-plist"><a href="#安装机制：itms-services-与-manifest-plist" class="headerlink" title="安装机制：itms-services 与 manifest.plist"></a>安装机制：itms-services 与 manifest.plist</h2><p>理解这条通道，关键是先搞清楚「点按钮」到「装上包」中间发生了什么。</p>
+<h3 id="按钮里是什么"><a href="#按钮里是什么" class="headerlink" title="按钮里是什么"></a>按钮里是什么</h3><p>安装按钮的 <code>href</code> 不指向 ipa，而是拼出来的一个特殊 scheme：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">itms-services://?action=download-manifest</span><br><span class="line">  &amp;url=https%3A%2F%2Fjenkins-app-new.umu.work%2Fota%2FUMU-JP%2F20260805_155200-7.7.26.2%2Fmanifest.plist</span><br></pre></td></tr></table></figure>
+
+<p><code>url</code> 参数是 <strong><code>manifest.plist</code> 的绝对地址</strong>，整体做了 URL 转义。必须是绝对地址，是因为这个 scheme 会被交给<strong>系统</strong>处理、脱离了页面上下文，写相对路径没用。</p>
+<p>（转义结果能硬编码，是因为脚本入口就限定站点标识只允许字母数字和 <code>. _ -</code>，不需要运行时转义。）</p>
+<h3 id="点击之后发生了什么"><a href="#点击之后发生了什么" class="headerlink" title="点击之后发生了什么"></a>点击之后发生了什么</h3><ol>
+<li>Safari 识别 <code>itms-services://</code>，把它交给系统的安装服务；</li>
+<li>系统按 <code>url</code> 参数去拉 <code>manifest.plist</code>；</li>
+<li>从清单里读出 ipa 的真实地址并下载；</li>
+<li><strong>校验签名</strong>——必须是 Ad Hoc（或企业 / 开发）签名的包，且描述文件里<strong>登记了这台设备的 UDID</strong>；</li>
+<li>通过之后才安装，对话框里的图标和名称同样来自清单。</li>
+</ol>
+<p>也就是说，按钮只负责<strong>告诉系统去哪读清单</strong>；真正的下载地址、包名、版本都在清单里。</p>
+<h3 id="manifest-plist-的内容"><a href="#manifest-plist-的内容" class="headerlink" title="manifest.plist 的内容"></a>manifest.plist 的内容</h3><p>由发布脚本现场生成：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=<span class="string">&quot;1.0&quot;</span> encoding=<span class="string">&quot;UTF-8&quot;</span>?&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE <span class="keyword">plist</span> <span class="keyword">PUBLIC</span> <span class="string">&quot;-//Apple//DTD PLIST 1.0//EN&quot;</span> <span class="string">&quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">plist</span> <span class="attr">version</span>=<span class="string">&quot;1.0&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">key</span>&gt;</span>items<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">array</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">key</span>&gt;</span>assets<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">array</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>kind<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>software-package<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>url<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>https://…/app.ipa<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>kind<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>display-image<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>url<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>https://…/icon.png<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>kind<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>full-size-image<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">key</span>&gt;</span>url<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>https://…/icon.png<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">array</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">key</span>&gt;</span>metadata<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>bundle-identifier<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>com.UMU.UMU-JP<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>bundle-version<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>7.7.26.2<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>kind<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>software<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>title<span class="tag">&lt;/<span class="name">key</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>UMU<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">array</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">plist</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>assets</code> → <code>software-package</code></td>
+<td><strong>真正要下载的 ipa 地址</strong></td>
+</tr>
+<tr>
+<td><code>display-image</code> / <code>full-size-image</code></td>
+<td>安装对话框和主屏图标，脚本里只有图标存在时才输出</td>
+</tr>
+<tr>
+<td><code>metadata.bundle-identifier</code></td>
+<td>要与包内一致，安装时会校验</td>
+</tr>
+<tr>
+<td><code>metadata.bundle-version</code></td>
+<td>显示用（<code>CFBundleShortVersionString</code>）</td>
+</tr>
+<tr>
+<td><code>metadata.title</code></td>
+<td>安装对话框显示的名称</td>
+</tr>
+</tbody></table>
+<h3 id="必须满足的条件"><a href="#必须满足的条件" class="headerlink" title="必须满足的条件"></a>必须满足的条件</h3><ul>
+<li><strong>必须 HTTPS，且只能用 Safari</strong>。微信 / 企业微信的内置浏览器里点这个按钮没有任何反应——所以页面上单独判断 UA，命中微信这类才显示一行橙色警告引导去 Safari。</li>
+<li>**plist 的 Content-Type 要映射成 <code>application/xml</code>**，nginx 片段里专门配了。</li>
+<li><strong><code>manifest.plist</code> 绝对不能缓存</strong>。缓存了会出现「点了按钮却装到上一个版本」——整个 <code>/ota/</code> 都设了 <code>Cache-Control: no-store</code>。</li>
+<li><strong>包必须是 Ad Hoc 签名，且本机 UDID 在描述文件里</strong>。</li>
+</ul>
+<blockquote>
+<p>这条链路和普通网页下载最大的区别：它不受「文件能不能下」限制，受<strong>签名和设备白名单</strong>限制。装不上通常不是网络问题，是设备没登记。</p>
+</blockquote>
+<h2 id="分发页与发布脚本"><a href="#分发页与发布脚本" class="headerlink" title="分发页与发布脚本"></a>分发页与发布脚本</h2><p>部署在打包机已有的 nginx 上（该机器同时在反代 Jenkins，已有正式通配符证书），纯静态直出，不额外引入服务。发布脚本由 fastlane 的 <code>archive_and_publish_adhoc</code> 调用，产出三级页面：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/ota/                    站点入口，每个站点显示最新包</span><br><span class="line">/ota/&#123;SITE&#125;/             该站点最新包（可直接装）+ 历史版本列表</span><br><span class="line">/ota/&#123;SITE&#125;/&#123;STAMP&#125;/     某次构建的安装页</span><br></pre></td></tr></table></figure>
+
+<p>每个构建目录里放 ipa、图标、二维码、<code>manifest.plist</code> 和元信息（<code>meta.env</code>）。站点级二维码永远指向最新包；每个站点保留最近 20 版。</p>
+<p>打包机上的数据目录：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">/Users/Shared/ota/</span><br><span class="line">├── site/ota/            nginx 根目录（不入库：单个 ipa 上百 MB）</span><br><span class="line">│   ├── index.html       全部站点</span><br><span class="line">│   └── &#123;SITE&#125;/          站点页：顶部最新包 + 历史版本列表</span><br><span class="line">│       ├── index.html</span><br><span class="line">│       ├── site-qr.png  站点二维码，永远指向最新包</span><br><span class="line">│       └── &#123;STAMP&#125;/     单次构建：app.ipa / icon.png / qr.png /</span><br><span class="line">│                        manifest.plist / meta.env / note.txt / index.html</span><br><span class="line">├── nginx-ota.conf       nginx 实际 include 的配置（setup.sh 生成）</span><br><span class="line">└── jp-support/          JP 重签支持服务副本 + 日志</span><br></pre></td></tr></table></figure>
+
+<h2 id="几个关键设计决定"><a href="#几个关键设计决定" class="headerlink" title="几个关键设计决定"></a>几个关键设计决定</h2><p><strong>发布脚本随仓库走，打包机上不放副本。</strong> 两边各存一份迟早会漂移，仓库里的那份是唯一信息源，改完推代码即生效。</p>
+<p><strong>nginx 片段生成到固定路径，而不是让 nginx 直接 include 仓库里的文件。</strong> 一旦 include 仓库文件，nginx 就被绑死在 Jenkins workspace 的存在和当前 checkout 的分支上——切到一个没有这个文件的分支再 reload，整个 Jenkins 反代都会跟着起不来。风险和收益不成比例。</p>
+<p><strong>Slack 通知必须用「本次构建的精确地址」，不能用站点入口。</strong> 站点入口永远指向最新包，别人再打一次包，旧消息就指到别人的包上了。所以脚本结尾专门输出一行机器可读的 <code>OTA_BUILD_URL=</code> 给 fastlane 解析。</p>
+<p><strong>靠数据目录存不存在判断「本机是否部署了 OTA」。</strong> 开发者本机没有这个目录就直接跳过发布——不然页面生成了也没 nginx 服务，还白拷一个上百 MB 的 ipa；同时不影响打包和 fir 上传。</p>
+<p><strong>UA 判断的失败方向要选对。</strong> 安装按钮永不隐藏；二维码默认显示、只在<strong>确认是 iOS</strong> 时才隐藏——判断错了最多多显示一个二维码，不会让人装不了包。</p>
+<p><strong>只允许内网访问。</strong> nginx 片段里覆盖了全部 RFC1918 私有网段。</p>
+<h2 id="踩过的坑"><a href="#踩过的坑" class="headerlink" title="踩过的坑"></a>踩过的坑</h2><p><strong><code>head -1</code> 会让脚本自己中断。</strong> 脚本是 <code>set -euo pipefail</code>，<code>head</code> 读够了就退出、给上游发 SIGPIPE，整条管道返回非零，被 <code>set -e</code> 当成错误。所以「取最新版本」改用参数展开取首行，不走管道。</p>
+<p><strong>函数里的临时变量必须 <code>local</code>。</strong> 有个读元信息的函数没加 <code>local</code>，覆盖了调用方 <code>while read</code> 循环里的同名变量，结果历史版本的链接全被写成了 <code>/</code>。</p>
+<p><strong>ipa 里的图标浏览器不认。</strong> 包内 png 是苹果 CgBI 优化过的，得先用 <code>pngcrush -revert-iphone-optimizations</code> 反优化。注意 <code>pngcrush</code> 失败时仍返回 0，只能靠产物是否存在来判断。</p>
+<p><strong>commit message 要转义。</strong> 里面出现 <code>&amp; &lt; &gt;</code> 完全可能，不转义会把页面和 plist 撑坏，所以统一走一个转义函数。</p>
+<p><strong>页面样式一改，老包的安装页要跟着更新。</strong> 所以每次发布都把该站点下所有版本页重渲染一遍，避免同一站点下新旧页面长得不一样。</p>
+<h2 id="JP-重签支持（去除-Widget）"><a href="#JP-重签支持（去除-Widget）" class="headerlink" title="JP 重签支持（去除 Widget）"></a>JP 重签支持（去除 Widget）</h2><h3 id="为什么需要"><a href="#为什么需要" class="headerlink" title="为什么需要"></a>为什么需要</h3><p>日本客户用<strong>自有证书</strong>重签我们 JP 的 App Store 包。包里的 <code>Widget-JPExtension.appex</code> 会让重签工具额外索要扩展的描述文件；而且 Widget 用的 App Group <code>group.umu.jp</code> 是写死的，重签后本来也拿不到数据。所以给客户的包，要先去 Widget。</p>
+<h3 id="服务形态"><a href="#服务形态" class="headerlink" title="服务形态"></a>服务形态</h3><p>静态页做不到「点击后生成 ipa」，所以加了一个轻量动态服务：</p>
+<ul>
+<li><strong>系统自带 python3 标准库</strong>实现 HTTP 服务，监听 <code>127.0.0.1:8765</code>，launchd 常驻；</li>
+<li>nginx 在 <code>/ota/</code> <strong>里面嵌套</strong> <code>/ota/jp-support/</code> 反代过去——直接继承已有的内网白名单、MIME 映射和 <code>no-store</code>，不用重复配置；</li>
+<li>上百 MB 的 ipa <strong>下载交给 nginx 直出</strong>（正则 location + <code>alias</code>，只放行 <code>UMU-JP-*.ipa</code>，dSYM 之类不暴露），Python 只负责页面、生成和记录；</li>
+<li>页面服务端渲染 HTML，表单 POST + 303 跳转，<strong>不引入前端框架、不提供 JSON API</strong>，与现有 OTA 静态页风格保持一致。</li>
+</ul>
+<p>页面就是列表 + 每行两个按钮：默认是「查看当前 IPA」和「去除 Widget」；生成过之后按钮变成「查看无 Widget IPA」，直接进详情页。详情页下载的文件名统一成 <code>UMU-JP-&lt;版本&gt;.&lt;build&gt;.ipa</code>。</p>
+<h3 id="去-Widget-的动作"><a href="#去-Widget-的动作" class="headerlink" title="去 Widget 的动作"></a>去 Widget 的动作</h3><p>把源包 clone 一份副本 → 按精确条目名删掉 <code>PlugIns/Widget-*.appex</code> → 校验压缩包完整 → <strong>原子改名</strong>落到正式位置 → 成功之后才清理旧产物。<strong>源包全程只读。</strong></p>
+<h3 id="几个关键决定"><a href="#几个关键决定" class="headerlink" title="几个关键决定"></a>几个关键决定</h3><ul>
+<li><strong>用 <code>zip -d</code> 而不是 Python 的 <code>zipfile</code> 重新打包</strong>。要保留其余条目的原始压缩数据和属性、不重新压缩；同时关掉通配符、从 stdin 传精确条目名，避免误删。Python 的 <code>zipfile</code> 做不到免重压缩地复制条目。</li>
+<li><strong>失败要能隔离</strong>。半成品只写在临时目录，校验全过了才原子改名，成功之后才 prune。任何一步失败都不动已有产物，源包不受影响；服务启动时还会清理残留半成品。</li>
+<li><strong>全局锁串行生成</strong>，避免并发互踩；生成前检查剩余空间是否够源包的两倍。</li>
+<li><strong>只删扩展条目，不动主 App 的二进制和资源</strong>。删完之后主 App 的签名封印失效是<strong>预期行为</strong>——这个产物本来就是拿去重签的。</li>
+<li><strong>服务跑的是安装副本，不是仓库里的文件</strong>。理由和 nginx 片段一样：不能让服务被 Jenkins workspace 当前 checkout 的分支绑死。</li>
+<li><strong>下载记录只能从页面点击采集</strong>。下载是 nginx 直出的，服务端感知不到，所以放在页面点击时用 <code>sendBeacon</code> 上报一条。这是取舍不是漏洞——直接访问下载链接确实不会留记录。</li>
+<li><strong>每个文件访问都走白名单正则校验</strong>（不含 <code>/</code> 和 <code>..</code>），挡住路径穿越。</li>
+<li><strong>线上版本标记用 iTunes Lookup，不用 App Store Connect 凭证</strong>。好处是不用配密钥，代价是只能拿到营销版本号、精确不到 build；成功缓存 1 小时、失败缓存 5 分钟，接口挂了只是丢标记，不影响生成与下载。</li>
+</ul>
+<h3 id="已知脆弱点"><a href="#已知脆弱点" class="headerlink" title="已知脆弱点"></a>已知脆弱点</h3><ul>
+<li>列表依赖 fastlane 的 ipa 命名格式和输出目录，任一改动匹配不到，列表就会变空；</li>
+<li>去 Widget 依赖扩展命名是 <code>Widget-*.appex</code>，改名或新增扩展就要同步调整；</li>
+<li>产物只保留 1 个（按 mtime），需要时再次生成——打包机磁盘已用约 94%，这是当前的取舍。</li>
+</ul>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这套东西解决的都是「内部交付」的问题，两个点值得记一下：</p>
+<ol>
+<li><strong>itms-services 这条链路的特殊性</strong>：它不受「文件能不能下载」限制，受<strong>签名和设备白名单</strong>限制。所以「装了没反应」八成不是网络问题，而是设备没登记，或者不在 Safari 里打开。</li>
+<li><strong>配置与数据的边界</strong>：nginx 片段生成到固定路径、服务跑安装副本、发布脚本随仓库走——本质都是<strong>不让生产环境被构建工作区绑死</strong>。这在 CI 机器上尤其重要，误配一次可能连带把整个反代搞挂。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/iOS%E3%80%81OTA%E3%80%81itms-services%E3%80%81nginx%E3%80%81Python/" rel="tag"># iOS、OTA、itms-services、nginx、Python</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5fastlane-match/" rel="prev" title="iOS 签名证书的自动化同步（fastlane match）">
+      <i class="fa fa-chevron-left"></i> iOS 签名证书的自动化同步（fastlane match）
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85%E6%9C%BA%E5%88%B6%EF%BC%9Aitms-services-%E4%B8%8E-manifest-plist"><span class="nav-number">2.</span> <span class="nav-text">安装机制：itms-services 与 manifest.plist</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%89%E9%92%AE%E9%87%8C%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.1.</span> <span class="nav-text">按钮里是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%82%B9%E5%87%BB%E4%B9%8B%E5%90%8E%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88"><span class="nav-number">2.2.</span> <span class="nav-text">点击之后发生了什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#manifest-plist-%E7%9A%84%E5%86%85%E5%AE%B9"><span class="nav-number">2.3.</span> <span class="nav-text">manifest.plist 的内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BF%85%E9%A1%BB%E6%BB%A1%E8%B6%B3%E7%9A%84%E6%9D%A1%E4%BB%B6"><span class="nav-number">2.4.</span> <span class="nav-text">必须满足的条件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%8F%91%E9%A1%B5%E4%B8%8E%E5%8F%91%E5%B8%83%E8%84%9A%E6%9C%AC"><span class="nav-number">3.</span> <span class="nav-text">分发页与发布脚本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%85%B3%E9%94%AE%E8%AE%BE%E8%AE%A1%E5%86%B3%E5%AE%9A"><span class="nav-number">4.</span> <span class="nav-text">几个关键设计决定</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">5.</span> <span class="nav-text">踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81%EF%BC%88%E5%8E%BB%E9%99%A4-Widget%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">JP 重签支持（去除 Widget）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81"><span class="nav-number">6.1.</span> <span class="nav-text">为什么需要</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E5%BD%A2%E6%80%81"><span class="nav-number">6.2.</span> <span class="nav-text">服务形态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%BB-Widget-%E7%9A%84%E5%8A%A8%E4%BD%9C"><span class="nav-number">6.3.</span> <span class="nav-text">去 Widget 的动作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%A0%E4%B8%AA%E5%85%B3%E9%94%AE%E5%86%B3%E5%AE%9A"><span class="nav-number">6.4.</span> <span class="nav-text">几个关键决定</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%B2%E7%9F%A5%E8%84%86%E5%BC%B1%E7%82%B9"><span class="nav-number">6.5.</span> <span class="nav-text">已知脆弱点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">小结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

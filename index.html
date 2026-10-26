@@ -153,7 +153,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5-fastlane-match/">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
@@ -167,7 +167,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5-fastlane-match/" class="post-title-link" itemprop="url">iOS 签名证书的自动化同步（fastlane match）</a>
+            <a href="/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/" class="post-title-link" itemprop="url">iOS 内测包的内网 OTA 分发与 JP 重签支持</a>
         </h2>
 
         <div class="post-meta">
@@ -178,7 +178,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2026-10-26 23:40:00 / 修改时间：23:26:35" itemprop="dateCreated datePublished" datetime="2026-10-26T23:40:00+08:00">2026-10-26</time>
+              <time title="创建时间：2026-10-26 23:55:00 / 修改时间：23:38:07" itemprop="dateCreated datePublished" datetime="2026-10-26T23:55:00+08:00">2026-10-26</time>
             </span>
 
           
@@ -192,10 +192,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>工程有两个 Apple 账号、五个区域 target（CN / Global / TW / JP / SEJ），每个 target 还带一个 Widget 扩展；签名类型又分 appstore / adhoc / development。也就是几十套「证书 + 描述文件」的组合，全部靠人工在各台机器上维护。</p>
+          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>内测包要有地方发。原来走 fir，但 fir 的下载页靠 <strong>UA 正则</strong>判断设备，而 iPadOS 13 之后默认「请求桌面网站」，UA 会报成 <code>Macintosh</code>——fir 判不出是 iOS，直接把下载按钮藏了，部分 iPad 根本装不了包。这个问题在第三方侧、改不动。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5-fastlane-match/#more" rel="contents">
+              <a class="btn" href="/2026/10/26/iOS-%E5%86%85%E6%B5%8B%E5%8C%85%E7%9A%84%E5%86%85%E7%BD%91-OTA-%E5%88%86%E5%8F%91%E4%B8%8E-JP-%E9%87%8D%E7%AD%BE%E6%94%AF%E6%8C%81/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -927,7 +927,7 @@
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
-        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-count">18</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
