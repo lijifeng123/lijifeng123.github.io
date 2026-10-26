@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="背景工程里有一批预编译的三方库，只带真机 arm64 切片；Flutter 产物同样只有真机 arm64。在 Apple Silicon 上想用 arm64 模拟器，需要的是「platform 为 iOS Simulator」的 arm64 二进制，两者不能互用。历史上靠手工替换 Zoom、NlsSdk 这类库来绕过，不进流程也容易漏。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 工程支持 arm64 模拟器的实现">
+<meta property="og:url" content="https://lijifeng168.com/2026/10/26/iOS-%E5%B7%A5%E7%A8%8B%E6%94%AF%E6%8C%81-arm64-%E6%A8%A1%E6%8B%9F%E5%99%A8%E7%9A%84%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="背景工程里有一批预编译的三方库，只带真机 arm64 切片；Flutter 产物同样只有真机 arm64。在 Apple Silicon 上想用 arm64 模拟器，需要的是「platform 为 iOS Simulator」的 arm64 二进制，两者不能互用。历史上靠手工替换 Zoom、NlsSdk 这类库来绕过，不进流程也容易漏。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T15:05:44.000Z">
+<meta property="article:modified_time" content="2026-10-26T15:06:02.783Z">
+<meta property="article:author" content="lijifeng">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/10/26/iOS-%E5%B7%A5%E7%A8%8B%E6%94%AF%E6%8C%81-arm64-%E6%A8%A1%E6%8B%9F%E5%99%A8%E7%9A%84%E5%AE%9E%E7%8E%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>iOS 工程支持 arm64 模拟器的实现 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/iOS-%E5%B7%A5%E7%A8%8B%E6%94%AF%E6%8C%81-arm64-%E6%A8%A1%E6%8B%9F%E5%99%A8%E7%9A%84%E5%AE%9E%E7%8E%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          iOS 工程支持 arm64 模拟器的实现
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-26 23:05:44 / 修改时间：23:06:02" itemprop="dateCreated datePublished" datetime="2026-10-26T23:05:44+08:00">2026-10-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>工程里有一批预编译的三方库，只带真机 arm64 切片；Flutter 产物同样只有真机 arm64。在 Apple Silicon 上想用 arm64 模拟器，需要的是「platform 为 iOS Simulator」的 arm64 二进制，两者不能互用。历史上靠手工替换 Zoom、NlsSdk 这类库来绕过，不进流程也容易漏。</p>
+<span id="more"></span>
+
+<p>工程默认状态是：Podfile 给 Pods 工程设置 <code>EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64</code>，即模拟器只能编 x86_64 走 Rosetta。但这条退路对部分库也无效——nuisdk 只有 <code>armv7 + arm64</code>，Flutter 产物只有真机 <code>arm64</code>。</p>
+<h2 id="根因：Mach-O-的平台标记"><a href="#根因：Mach-O-的平台标记" class="headerlink" title="根因：Mach-O 的平台标记"></a>根因：Mach-O 的平台标记</h2><p>真机 arm64 和模拟器 arm64 的<strong>架构名完全一样</strong>，<code>lipo -archs</code> 区分不出来。差别在二进制内部：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ xcrun vtool -show-build &lt;binary&gt; | grep platform</span><br><span class="line">ios-arm64                    → platform IOS</span><br><span class="line">ios-arm64_x86_64-simulator   → platform IOSSIMULATOR</span><br></pre></td></tr></table></figure>
+
+<p>对应到构建期，链接会报 <code>building for iOS Simulator, but linking in object file built for iOS</code>；即使侥幸链上，运行期 dyld 也会因平台不兼容拒绝加载。</p>
+<p>所以任何方案的本质都一样：<strong>提供一个 platform = IOSSIMULATOR 的二进制</strong>。区别只在于这个二进制从哪来——XCFramework 靠上游打包时的带外元数据，老式 flat <code>.framework</code> / <code>.a</code> 没有这个位置，只能改二进制本身。</p>
+<h2 id="总体思路"><a href="#总体思路" class="headerlink" title="总体思路"></a>总体思路</h2><p>不改动仓库任何文件，在本地 <code>.sim/</code> 目录生成一套模拟器版副本，再通过 CocoaPods 生成的构建配置，让模拟器构建看到副本、真机构建完全看不到。</p>
+<p>关键取舍是：<strong>不改链接标志</strong>。<code>-framework nuisdk</code>、<code>-l&quot;WeChatSDK&quot;</code> 这些来自 podspec 和工程文件，改它们等于改仓库；唯一能在「标志不变」的前提下换实现的位置，是搜索路径的顺序——放在最前，同名文件优先命中。</p>
+<h2 id="开关"><a href="#开关" class="headerlink" title="开关"></a>开关</h2><p><code>.sim/enabled</code> 是否存在，决定 Podfile 走哪条分支：</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">simulator_mode?</span></span><br><span class="line">  File.exist?(File.join(__dir__, <span class="string">&#x27;.sim&#x27;</span>, <span class="string">&#x27;enabled&#x27;</span>))</span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<p>用文件而不是环境变量，是因为开关状态不落在任何被跟踪的文件里，<code>git status</code> 始终干净，其他人拉到的还是原样 Podfile。<code>.sim/</code> 在 <code>.gitignore</code> 中。</p>
+<h2 id="配置分流"><a href="#配置分流" class="headerlink" title="配置分流"></a>配置分流</h2><p><code>pod install</code> 时，post_install 里做三件事。</p>
+<h3 id="1-放开架构限制"><a href="#1-放开架构限制" class="headerlink" title="1. 放开架构限制"></a>1. 放开架构限制</h3><figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">target.build_configurations.each <span class="keyword">do</span> |<span class="params">config</span>|</span><br><span class="line">  config.build_settings[<span class="string">&#x27;EXCLUDED_ARCHS[sdk=iphonesimulator*]&#x27;</span>] = <span class="string">&#x27;i386&#x27;</span></span><br><span class="line">  config.build_settings[<span class="string">&#x27;VALID_ARCHS[sdk=iphonesimulator*]&#x27;</span>]    = <span class="string">&#x27;arm64&#x27;</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<p>有些 podspec 自己把模拟器限定成 x86_64 或显式排除了 arm64，逐个 target 覆盖掉。</p>
+<h3 id="2-搜索路径前置"><a href="#2-搜索路径前置" class="headerlink" title="2. 搜索路径前置"></a>2. 搜索路径前置</h3><p>改写 aggregate target（<code>Pods-&lt;Target&gt;</code>）的 xcconfig：先删掉其中所有带 <code>[sdk=iphonesimulator*]</code> 的 <code>EXCLUDED_ARCHS</code> / <code>VALID_ARCHS</code> / <code>FRAMEWORK_SEARCH_PATHS</code> / <code>LIBRARY_SEARCH_PATHS</code> 行，再追加：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*] = &quot;$&#123;PODS_ROOT&#125;/../.sim/overlay/frameworks&quot; &quot;$&#123;PODS_ROOT&#125;/../.sim/flutter&quot; $(inherited) &lt;原有内容&gt;</span><br><span class="line">LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]   = &quot;$&#123;PODS_ROOT&#125;/../.sim/overlay/libs&quot; $(inherited) &lt;原有内容&gt;</span><br></pre></td></tr></table></figure>
+
+<p>选择 aggregate xcconfig 而不是各个 pod 的 xcconfig，原因是它被设成了 App target 构建配置的 <code>baseConfigurationReference</code>，App target 和所有子工程都继承它，改一处即全局生效。</p>
+<p>路径上 <code>PODS_ROOT = $&#123;SRCROOT&#125;/../Pods</code>，所以 <code>$&#123;PODS_ROOT&#125;/../.sim/...</code> 正好等于仓库根下的 <code>.sim/...</code>。</p>
+<p>这里还有一个容易被忽略的点：App target 自己在 pbxproj 里的搜索路径把 <code>$(inherited)</code> 放在列表<strong>第一位</strong>，所以继承来的 overlay 路径会插到工程自带路径<strong>之前</strong>，最终顺序是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.sim/overlay/frameworks → .sim/flutter → Pods 路径 → 工程自带路径</span><br></pre></td></tr></table></figure>
+
+<p>链接器取第一个命中，<code>-framework nuisdk</code> 就落到了副本上。</p>
+<h3 id="3-嵌入脚本改写"><a href="#3-嵌入脚本改写" class="headerlink" title="3. 嵌入脚本改写"></a>3. 嵌入脚本改写</h3><p>链接到正确的二进制不等于打包里就是它。<code>Pods-&lt;Target&gt;-frameworks.sh</code> 需要处理两件事：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Flutter 目录整体切到 .sim/flutter</span></span><br><span class="line">UMU_SIM_FLUTTER_DIR=<span class="string">&quot;<span class="variable">$&#123;PODS_ROOT&#125;</span>/../.sim/flutter&quot;</span>   <span class="comment"># 真机时为 $&#123;PODS_ROOT&#125;/../Flutter/Flutter</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># nuisdk：主工程 Embed Frameworks 先于本脚本执行，这里再覆盖一次</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="string">&quot;<span class="variable">$&#123;PLATFORM_NAME&#125;</span>&quot;</span> = <span class="string">&quot;iphonesimulator&quot;</span> ] &amp;&amp; [ -d <span class="string">&quot;<span class="variable">$&#123;TARGET_BUILD_DIR&#125;</span>/<span class="variable">$&#123;FRAMEWORKS_FOLDER_PATH&#125;</span>/nuisdk.framework&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">  install_framework <span class="string">&quot;<span class="variable">$&#123;PODS_ROOT&#125;</span>/../.sim/overlay/frameworks/nuisdk.framework&quot;</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+<p>脚本改写用 <code>script.include?(&#39;UMU_SIM_FLUTTER_DIR&#39;)</code> 做幂等保护，重复 <code>pod install</code> 不会叠加插入。</p>
+<h2 id="不在-CocoaPods-里的-SDK-怎么处理"><a href="#不在-CocoaPods-里的-SDK-怎么处理" class="headerlink" title="不在 CocoaPods 里的 SDK 怎么处理"></a>不在 CocoaPods 里的 SDK 怎么处理</h2><p>工程里有相当一部分库是直接放进仓库、由 App target 自己引用的（WebP、WebPDecoder、liblame.a、UMMobClick、libWeChatSDK.a、nuisdk）。它们走的是 App target 在 pbxproj 里的两组设置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">FRAMEWORK_SEARCH_PATHS = ( &quot;$(inherited)&quot;, &quot;$(PROJECT_DIR)/UMU/OpenSource/AliNls&quot;, ... )</span><br><span class="line">LIBRARY_SEARCH_PATHS   = ( &quot;$(inherited)&quot;, &quot;$(PROJECT_DIR)/UMU/UMU_Core/Lame&quot;, ... )</span><br></pre></td></tr></table></figure>
+
+<p>因为 App target 的 base configuration 就是 Pods 生成的 aggregate xcconfig，上面第 2 步里的条件设置自然被 App target 继承，<strong>不需要修改工程文件</strong>。</p>
+<p>overlay 目录按类型摊平，不复刻仓库里的多层结构：</p>
+<table>
+<thead>
+<tr>
+<th>源位置</th>
+<th>overlay 位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>UMU_Teacher/UMU/OpenSource/AliNls/nuisdk.framework</code></td>
+<td><code>.sim/overlay/frameworks/nuisdk.framework</code></td>
+</tr>
+<tr>
+<td><code>Pods/FirebaseAnalytics/Frameworks/FirebaseAnalytics.framework</code></td>
+<td><code>.sim/overlay/frameworks/FirebaseAnalytics.framework</code></td>
+</tr>
+<tr>
+<td><code>UMU_Teacher/UMU/OpenSource/WeChat-2.0.5/libWeChatSDK.a</code></td>
+<td><code>.sim/overlay/libs/libWeChatSDK.a</code></td>
+</tr>
+<tr>
+<td><code>UMU_Core/UMU_Core/Lame/liblame.a</code></td>
+<td><code>.sim/overlay/libs/liblame.a</code></td>
+</tr>
+</tbody></table>
+<p>规则是 <code>.framework</code> 进 <code>frameworks/</code>、<code>.a</code> 进 <code>libs/</code>。搜索路径是目录级的，只要目录在前、文件名一致就命中。</p>
+<p>需要区分<strong>链接</strong>和<strong>嵌入</strong>两条路：</p>
+<ul>
+<li>链接靠搜索路径，静态库只需要这一步；</li>
+<li>嵌入走 App target 的 Embed Frameworks build phase，用的是 pbxproj 里的文件引用，<strong>跟搜索路径无关</strong>。</li>
+</ul>
+<p><code>SOURCES</code> 清单里 12 个库，实测 11 个是静态库，只有 nuisdk 是动态库。这解释了为什么只有它需要额外改嵌入脚本——静态库会被链进主二进制，不存在独立嵌入。交叉验证方式：<code>grep install_framework</code> 所有 <code>Pods-*-frameworks.sh</code>，其中没有任何 Bugly / opencv2 / Fabric / Firebase 的 install 行。</p>
+<h2 id="overlay-的生成"><a href="#overlay-的生成" class="headerlink" title="overlay 的生成"></a>overlay 的生成</h2><p><code>SOURCES</code> 列了 12 项，<code>is_fresh</code> 用 <code>shasum</code> 和上次的 <code>*.sha</code> 比对，源二进制没变就跳过，所以每次 <code>pod install</code> 都跑 refresh 的代价接近零。</p>
+<p>转换由 <code>arm64_to_sim.py</code> 完成，按三种形态分别处理：</p>
+<table>
+<thead>
+<tr>
+<th>形态</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>静态库（<code>.a</code>）</td>
+<td>逐个 ar 成员改平台标记，再用 <code>libtool</code> 重新打包</td>
+</tr>
+<tr>
+<td>动态库</td>
+<td><code>vtool -set-build-version</code> 改平台，再 ad-hoc 重签</td>
+</tr>
+<tr>
+<td>fat 二进制</td>
+<td>只把 arm64 切片 thin 出来改，原有 x86_64 切片保留，<code>lipo -create</code> 合并回去</td>
+</tr>
+</tbody></table>
+<p>静态库这一段是整个方案里最需要小心的地方。<code>vtool</code> 处理 <code>ar</code> 归档会失败，因为它在 Mach-O 加载命令区没有预留空间时改不动，所以要自己动手：</p>
+<ol>
+<li>把每个目标文件的 <code>LC_VERSION_MIN_IPHONEOS</code> 替换成 <code>LC_BUILD_VERSION</code>，platform 置 7（IOSSIMULATOR）；</li>
+<li>为此需要撑大加载命令区，随之把 symtab、segment、reloc、linkedit 等<strong>所有文件偏移同步后移</strong>，后移量取各段最大对齐的整数倍，保证对齐关系不变；</li>
+<li>用 <code>libtool</code> 重新打包。</li>
+</ol>
+<p>framework 的拷贝策略是整目录 <code>cp -R</code>（保留 <code>Headers</code>、<code>Info.plist</code>），只替换内部那个二进制；二进制被改后原 <code>_CodeSignature</code> 失效，动态库需要整体重签一次，静态库无所谓——它最终会被链进主二进制。</p>
+<h2 id="Flutter-产物"><a href="#Flutter-产物" class="headerlink" title="Flutter 产物"></a>Flutter 产物</h2><p>仓库里 <code>Flutter/Flutter/</code> 下的产物只有真机 arm64 切片，所以模拟器需要单独编一份：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">flutter build ios-framework --debug --no-profile --no-release --no-plugins --no-tree-shake-icons</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>从同级 <code>umu_flutter</code> 仓编译，来源必须显式指定（<code>current</code> / <code>release</code> / <code>same</code> / 分支名），非 <code>current</code> 时用临时 worktree，不动本地 Flutter 仓的分支和未提交改动；</li>
+<li>只抽 <code>ios-arm64_x86_64-simulator</code> 切片下的 <code>App.framework</code> + <code>Flutter.framework</code> 到 <code>.sim/flutter</code>；</li>
+<li><code>--no-plugins</code>：插件原生代码仍由 Pods 里的插件 pod 提供，不进这份产物；</li>
+<li>因为 <code>--debug</code>，<code>App.framework</code> 里是 <code>kernel_blob.bin</code> + <code>isolate_snapshot_data</code>（JIT），与真机 release 的 AOT 产物行为有差异；</li>
+<li>记录 <code>flutter_source</code> / <code>flutter_commit</code> / <code>ios_flutter_rev</code>，最后一个用于判断这份产物是否在 iOS 侧产物更新前生成，过期时给出提示。</li>
+</ul>
+<p>有个实际的坑：<code>Pods-*-frameworks.sh</code> 的输入没变时 Xcode 会跳过执行，导致嵌入的仍是旧产物，所以产物生成后会 <code>touch</code> 一次相关脚本。</p>
+<h2 id="与-XCFramework-的关系"><a href="#与-XCFramework-的关系" class="headerlink" title="与 XCFramework 的关系"></a>与 XCFramework 的关系</h2><p>工程里已有 5 个依赖用的是 XCFramework：WebRTC、MicrosoftCognitiveServicesSpeech、QCloudRealTime、RecaptchaEnterpriseSDK、TensorFlowLiteC。它们从来不需要处理，原因值得对比。</p>
+<p>XCFramework 是一个目录包，按平台各存一份切片，外加一张说明表。以 <code>WebRTC.xcframework</code> 为例（整个包 141M）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">WebRTC.xcframework/</span><br><span class="line">├── Info.plist</span><br><span class="line">├── ios-arm64/                      → 12M，仅 arm64，platform IOS</span><br><span class="line">├── ios-arm64_x86_64-simulator/     → 27M，arm64 + x86_64，platform IOSSIMULATOR</span><br><span class="line">├── ios-arm64_x86_64-maccatalyst/</span><br><span class="line">├── macos-arm64_x86_64/</span><br><span class="line">└── tvos-* / xros-*</span><br></pre></td></tr></table></figure>
+
+<p><code>Info.plist</code> 里显式登记了每个切片的平台与架构：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123; LibraryIdentifier: &quot;ios-arm64_x86_64-simulator&quot;,</span><br><span class="line">  SupportedPlatform: &quot;ios&quot;,</span><br><span class="line">  SupportedPlatformVariant: &quot;simulator&quot;,     ← 模拟器</span><br><span class="line">  SupportedArchitectures: [arm64, x86_64] &#125;,</span><br><span class="line">&#123; LibraryIdentifier: &quot;ios-arm64&quot;,</span><br><span class="line">  SupportedPlatform: &quot;ios&quot;,                  ← 无 variant = 真机</span><br><span class="line">  SupportedArchitectures: [arm64] &#125;</span><br></pre></td></tr></table></figure>
+
+<p>差别就在这里：<strong>模拟器切片的架构名同样是 arm64，是 <code>SupportedPlatformVariant</code> 这个带外字段把两者区分开的</strong>。flat <code>.framework</code> 没有地方放这个字段，所以 <code>lipo</code> 无论如何都分不出来。</p>
+<p>XCFramework 不能直接链接，必须先解包。CocoaPods 在 Pods.xcodeproj 里为每个带 xcframework 的 pod target 加了一个 <code>[CP] Copy XCFrameworks</code> 脚本阶段，执行 <code>Pods-&lt;Name&gt;-xcframeworks.sh</code>，按当前构建平台挑切片：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">target_variant=<span class="string">&quot;&quot;</span></span><br><span class="line"><span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$PLATFORM_NAME</span>&quot;</span> == *<span class="string">&quot;simulator&quot;</span> ]]; <span class="keyword">then</span> target_variant=<span class="string">&quot;simulator&quot;</span>; <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">if</span> [[ <span class="string">&quot;<span class="variable">$EFFECTIVE_PLATFORM_NAME</span>&quot;</span> == *<span class="string">&quot;maccatalyst&quot;</span> ]]; <span class="keyword">then</span> target_variant=<span class="string">&quot;maccatalyst&quot;</span>; <span class="keyword">fi</span></span><br><span class="line"><span class="comment"># 再逐个切片比对：variant 一致，且切片 archs 覆盖当前 $ARCHS</span></span><br></pre></td></tr></table></figure>
+
+<p>选中的切片被 rsync 到 <code>$&#123;PODS_XCFRAMEWORKS_BUILD_DIR&#125;/&lt;Name&gt;/</code>，到这里才变成普通的 <code>.framework</code>，然后走常规通道：xcconfig 里的 <code>-iframework</code> 负责链接，<code>Pods-*-frameworks.sh</code> 里的 <code>install_framework</code> 负责嵌入。</p>
+<p>一个排查线索：如果某个 XCFramework 缺模拟器切片，这里不会报错，只打一行 warning 然后 <code>return</code>，失败会推迟到后面的链接阶段。</p>
+<p>对比下来，overlay 方案本质上是<strong>给老式二进制手工造出 XCFramework 的效果</strong>：XCFramework 由上游备好切片、工具链自动挑；老式库由本地脚本补切片、靠搜索路径顺序冒充。判断一个新库要不要处理，标准可以简化为——看它有没有 <code>ios-arm64_x86_64-simulator</code> 这样的模拟器切片。</p>
+<h2 id="隔离性"><a href="#隔离性" class="headerlink" title="隔离性"></a>隔离性</h2><p>保证真机与上线包不受影响，靠三个条件同时生效：</p>
+<ol>
+<li>所有架构和搜索路径 build setting 都带 <code>[sdk=iphonesimulator*]</code> 后缀；</li>
+<li>overlay 目录只出现在这两条带后缀的搜索路径里，真机构建的搜索列表里没有 <code>.sim/</code>；</li>
+<li>嵌入脚本里的替换都判断 <code>PLATFORM_NAME == iphonesimulator</code>。</li>
+</ol>
+<p>所以真机链接的仍是仓库原件，App 包内也不会混入模拟器二进制。默认关闭，<code>.sim/</code> 不入库，pod install 是唯一入口，别人和 CI 的行为零变化。</p>
+<h2 id="使用方式"><a href="#使用方式" class="headerlink" title="使用方式"></a>使用方式</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Shell/simulator/sim_toggle.sh flutter &lt;来源&gt;   <span class="comment"># 生成/更新 Flutter 模拟器产物</span></span><br><span class="line">Shell/simulator/sim_toggle.sh on              <span class="comment"># 打标 + pod install</span></span><br><span class="line">Shell/simulator/sim_toggle.sh status          <span class="comment"># 模式、产物来源、各库转换状态</span></span><br><span class="line">Shell/simulator/sim_toggle.sh off             <span class="comment"># 摘标 + pod install 还原</span></span><br></pre></td></tr></table></figure>
+
+<p>开启后在 Xcode 里 Clean Build Folder，再选 arm64 模拟器运行。</p>
+<h2 id="边界与已知问题"><a href="#边界与已知问题" class="headerlink" title="边界与已知问题"></a>边界与已知问题</h2><ul>
+<li>只解决加载与链接。相机、扫码、AI 检测、推送、微信分享登录在模拟器上不可用，这是模拟器本身的能力限制。</li>
+<li>Flutter 只有 debug(JIT)，没有 release。</li>
+<li>新增「只有真机切片」的库需要人工加进 <code>SOURCES</code>，做不到全自动。</li>
+<li>已知问题：SVGKit 在 arm64 模拟器下识别不了，启动后第一张 SVG 不显示，真机无影响。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/26/%E4%B8%BA-Go-Agent-%E5%AE%9E%E7%8E%B0-MCP-Client%E5%B7%A5%E5%85%B7%E6%8E%A5%E5%85%A5%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E/" rel="prev" title="为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连">
+      <i class="fa fa-chevron-left"></i> 为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B9%E5%9B%A0%EF%BC%9AMach-O-%E7%9A%84%E5%B9%B3%E5%8F%B0%E6%A0%87%E8%AE%B0"><span class="nav-number">2.</span> <span class="nav-text">根因：Mach-O 的平台标记</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E4%BD%93%E6%80%9D%E8%B7%AF"><span class="nav-number">3.</span> <span class="nav-text">总体思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%80%E5%85%B3"><span class="nav-number">4.</span> <span class="nav-text">开关</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%88%86%E6%B5%81"><span class="nav-number">5.</span> <span class="nav-text">配置分流</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%94%BE%E5%BC%80%E6%9E%B6%E6%9E%84%E9%99%90%E5%88%B6"><span class="nav-number">5.1.</span> <span class="nav-text">1. 放开架构限制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E6%90%9C%E7%B4%A2%E8%B7%AF%E5%BE%84%E5%89%8D%E7%BD%AE"><span class="nav-number">5.2.</span> <span class="nav-text">2. 搜索路径前置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%B5%8C%E5%85%A5%E8%84%9A%E6%9C%AC%E6%94%B9%E5%86%99"><span class="nav-number">5.3.</span> <span class="nav-text">3. 嵌入脚本改写</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8D%E5%9C%A8-CocoaPods-%E9%87%8C%E7%9A%84-SDK-%E6%80%8E%E4%B9%88%E5%A4%84%E7%90%86"><span class="nav-number">6.</span> <span class="nav-text">不在 CocoaPods 里的 SDK 怎么处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#overlay-%E7%9A%84%E7%94%9F%E6%88%90"><span class="nav-number">7.</span> <span class="nav-text">overlay 的生成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flutter-%E4%BA%A7%E7%89%A9"><span class="nav-number">8.</span> <span class="nav-text">Flutter 产物</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E-XCFramework-%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-number">9.</span> <span class="nav-text">与 XCFramework 的关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9A%94%E7%A6%BB%E6%80%A7"><span class="nav-number">10.</span> <span class="nav-text">隔离性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E6%96%B9%E5%BC%8F"><span class="nav-number">11.</span> <span class="nav-text">使用方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BE%B9%E7%95%8C%E4%B8%8E%E5%B7%B2%E7%9F%A5%E9%97%AE%E9%A2%98"><span class="nav-number">12.</span> <span class="nav-text">边界与已知问题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">20</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">16</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
