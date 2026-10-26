@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连 参考 Claude Code 的 MCP 实现，用 Go 为自研 Agent 框架 opengiraffe（agentic_os）补上 MCP 工具调用能力，并进一步实现连接状态追踪、指数退避重连与 TUI 实时展示。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连">
+<meta property="og:url" content="https://lijifeng168.com/2026/10/26/%E4%B8%BA-Go-Agent-%E5%AE%9E%E7%8E%B0-MCP-Client%E5%B7%A5%E5%85%B7%E6%8E%A5%E5%85%A5%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连 参考 Claude Code 的 MCP 实现，用 Go 为自研 Agent 框架 opengiraffe（agentic_os）补上 MCP 工具调用能力，并进一步实现连接状态追踪、指数退避重连与 TUI 实时展示。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T04:04:06.000Z">
+<meta property="article:modified_time" content="2026-10-26T04:05:38.135Z">
+<meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="MCP">
+<meta property="article:tag" content="Go">
+<meta property="article:tag" content="Agent">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/10/26/%E4%B8%BA-Go-Agent-%E5%AE%9E%E7%8E%B0-MCP-Client%E5%B7%A5%E5%85%B7%E6%8E%A5%E5%85%A5%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/%E4%B8%BA-Go-Agent-%E5%AE%9E%E7%8E%B0-MCP-Client%E5%B7%A5%E5%85%B7%E6%8E%A5%E5%85%A5%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-26 12:04:06 / 修改时间：12:05:38" itemprop="dateCreated datePublished" datetime="2026-10-26T12:04:06+08:00">2026-10-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="为-Go-Agent-实现-MCP-Client：工具接入、状态管理与断线重连"><a href="#为-Go-Agent-实现-MCP-Client：工具接入、状态管理与断线重连" class="headerlink" title="为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连"></a>为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连</h1><blockquote>
+<p>参考 Claude Code 的 MCP 实现，用 Go 为自研 Agent 框架 opengiraffe（agentic_os）补上 MCP 工具调用能力，并进一步实现连接状态追踪、指数退避重连与 TUI 实时展示。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p><a target="_blank" rel="noopener" href="https://modelcontextprotocol.io/">MCP（Model Context Protocol）</a> 已经成为 Agent 工具生态的事实标准：外部能力以 MCP Server 的形式提供工具，Agent 作为 Host 通过内置的 Client 去连接并调用。</p>
+<p>本文记录我在 opengiraffe（一个 Go 实现的 Agent 框架）中从零接入 MCP Client 的完整过程，分两个阶段：</p>
+<ol>
+<li><strong>基础能力</strong>：连接 MCP Server、发现工具、注册为 Agent 可调用的工具；</li>
+<li><strong>可靠性增强</strong>：连接状态追踪、断线自动重连、状态变更实时推送到 TUI。</li>
+</ol>
+<p>实现思路大量参考了 Claude Code 的 MCP 模块（<code>src/services/mcp/</code>）。</p>
+<hr>
+<h2 id="一、先分清-MCP-的三方角色"><a href="#一、先分清-MCP-的三方角色" class="headerlink" title="一、先分清 MCP 的三方角色"></a>一、先分清 MCP 的三方角色</h2><p>很多人以为 MCP 只有「Server + Client」两方，按协议定义其实是三方：</p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>是什么</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Host</strong></td>
+<td>Trae、Claude Code、Cursor 这类 AI 应用</td>
+<td>运行模型、管理会话、决定何时调工具</td>
+</tr>
+<tr>
+<td><strong>Client</strong></td>
+<td>通常内嵌在 Host 中，每个 Server 对应一个实例</td>
+<td>与某个 Server 建立 <strong>1:1</strong> 连接、能力协商、消息路由</td>
+</tr>
+<tr>
+<td><strong>Server</strong></td>
+<td>独立进程或远程服务</td>
+<td>暴露 Tools / Resources / Prompts</td>
+</tr>
+</tbody></table>
+<p>几个关键结论：</p>
+<ul>
+<li><strong>Client 一般不用自己写</strong>。接入 MCP 时通常只需实现/选择一个 Server，再在 Host 中配置，Client 那半由 Host 自带。</li>
+<li><strong>通信成立必须两端都有</strong>，但不必自己开发两端。</li>
+<li><strong>Client 与 Server 是 1:1</strong>，一个 Host 挂多个 MCP 就有多个 Client 实例，某个 Server 挂掉不影响其它。</li>
+<li><strong>传输层</strong>分两类：<code>stdio</code>（本地子进程，Host 通过 <code>command</code> + <code>args</code> 启动）与 <code>SSE / Streamable HTTP</code>（远程 Server 走网络）。</li>
+</ul>
+<p>opengiraffe 要做的，正是补齐 <strong>Host 内嵌的 Client 这一侧</strong>。</p>
+<hr>
+<h2 id="二、Claude-Code-的-MCP-实现分析"><a href="#二、Claude-Code-的-MCP-实现分析" class="headerlink" title="二、Claude Code 的 MCP 实现分析"></a>二、Claude Code 的 MCP 实现分析</h2><h3 id="2-1-核心数据流"><a href="#2-1-核心数据流" class="headerlink" title="2.1 核心数据流"></a>2.1 核心数据流</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">MCP Config → Config Parser → Client Manager → Tool Discovery → Tool Registration → Tool Execution</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-关键文件"><a href="#2-2-关键文件" class="headerlink" title="2.2 关键文件"></a>2.2 关键文件</h3><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mcp/config.ts</code></td>
+<td>加载多级配置（local / user / project / enterprise）</td>
+</tr>
+<tr>
+<td><code>mcp/client.ts</code></td>
+<td>Client 生命周期、工具发现、工具调用（核心，3000+ 行）</td>
+</tr>
+<tr>
+<td><code>mcp/types.ts</code></td>
+<td>Zod schema + 连接状态类型</td>
+</tr>
+<tr>
+<td><code>mcp/auth.ts</code></td>
+<td>OAuth / XAA 认证</td>
+</tr>
+<tr>
+<td><code>tools/MCPTool/MCPTool.ts</code></td>
+<td>Tool 适配器（<code>isMcp=true</code>）</td>
+</tr>
+<tr>
+<td><code>mcp/mcpStringUtils.ts</code></td>
+<td>名称格式化工具</td>
+</tr>
+</tbody></table>
+<h3 id="2-3-两个值得抄的设计"><a href="#2-3-两个值得抄的设计" class="headerlink" title="2.3 两个值得抄的设计"></a>2.3 两个值得抄的设计</h3><p><strong>① 工具命名统一加前缀</strong>，避免与内置工具冲突：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mcp__&lt;servername&gt;__&lt;toolname&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>② 传输类型抽象</strong>：Stdio / SSE / HTTP / WebSocket / SDK in-process 统一成 <code>Transport</code> 接口，上层逻辑不感知差异。本次实现优先落地 <code>stdio + SSE</code>。</p>
+<hr>
+<h2 id="三、opengiraffe-的扩展点"><a href="#三、opengiraffe-的扩展点" class="headerlink" title="三、opengiraffe 的扩展点"></a>三、opengiraffe 的扩展点</h2><p>opengiraffe 已经有一套 Plugin 体系，MCP 只需作为一个 Plugin 挂进去即可：</p>
+<ul>
+<li><strong>Plugin 接口</strong>（<code>pkg/types/plugin.go</code>）：<code>Register(api PluginAPI)</code>，用于注册 Tool / ToolFactory / Hook。</li>
+<li><strong>Tool 接口</strong>（<code>pkg/types/interfaces.go</code>）：<code>ID / Name / Description / Parameters / Execute</code>。</li>
+<li><strong>ToolFactory 接口</strong>：<code>Names()</code> / <code>Create(ToolCreationContext)</code>，按 session 创建工具。</li>
+<li><strong>InstanceConfig</strong>（<code>pkg/types/interfaces.go</code>）：YAML 配置根 struct，需新增 <code>MCP</code> 字段。</li>
+<li><strong>serve.go</strong>（<code>internal/cli/serve.go</code>）：插件注册入口。</li>
+</ul>
+<p>现有内置工具的 Plugin 模式长这样：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> BuiltinToolsPlugin <span class="keyword">struct</span> &#123; cfg types.ToolsConfig &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *BuiltinToolsPlugin)</span></span> Register(api types.PluginAPI) <span class="type">error</span> &#123;</span><br><span class="line">    api.RegisterTool(&amp;ReadTool&#123;&#125;)</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>照这个模式，MCP 的接入点就很清晰了。</p>
+<hr>
+<h2 id="四、实现方案：把-MCP-Server-变成一堆-Tool"><a href="#四、实现方案：把-MCP-Server-变成一堆-Tool" class="headerlink" title="四、实现方案：把 MCP Server 变成一堆 Tool"></a>四、实现方案：把 MCP Server 变成一堆 Tool</h2><h3 id="4-1-选型决策"><a href="#4-1-选型决策" class="headerlink" title="4.1 选型决策"></a>4.1 选型决策</h3><ul>
+<li><strong>SDK</strong>：<code>github.com/modelcontextprotocol/go-sdk</code>（官方）</li>
+<li><strong>连接策略</strong>：全局共享连接——服务启动时连接所有 MCP Server，所有 session 共用</li>
+<li><strong>注册方式</strong>：静态注册（<code>RegisterTool</code>），不用 ToolFactory，简化生命周期管理</li>
+</ul>
+<h3 id="4-2-连接生命周期"><a href="#4-2-连接生命周期" class="headerlink" title="4.2 连接生命周期"></a>4.2 连接生命周期</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">serve.go → MCPPlugin.Register()</span><br><span class="line">  → 遍历 cfg.MCP.Servers</span><br><span class="line">  → MCPClientManager.Connect(name, serverCfg)</span><br><span class="line">  → client.Initialize() + client.ListTools()</span><br><span class="line">  → api.RegisterTool(MCPTool&#123;...&#125;)   // 每个发现的工具注册一个</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-配置类型：扩一个-MCPConfig"><a href="#4-3-配置类型：扩一个-MCPConfig" class="headerlink" title="4.3 配置类型：扩一个 MCPConfig"></a>4.3 配置类型：扩一个 MCPConfig</h3><p>在 <code>InstanceConfig</code> 末尾加一个字段，并定义 Server 配置（同时兼容 stdio / sse）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MCPConfig <span class="keyword">struct</span> &#123;</span><br><span class="line">    Servers <span class="keyword">map</span>[<span class="type">string</span>]MCPServerConfig <span class="string">`yaml:&quot;servers&quot; json:&quot;servers&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> MCPServerConfig <span class="keyword">struct</span> &#123;</span><br><span class="line">    Type    <span class="type">string</span>            <span class="string">`yaml:&quot;type&quot;`</span>               <span class="comment">// &quot;stdio&quot; | &quot;sse&quot;</span></span><br><span class="line">    Command <span class="type">string</span>            <span class="string">`yaml:&quot;command&quot;`</span>            <span class="comment">// stdio only</span></span><br><span class="line">    Args    []<span class="type">string</span>          <span class="string">`yaml:&quot;args&quot;`</span>               <span class="comment">// stdio only</span></span><br><span class="line">    Env     <span class="keyword">map</span>[<span class="type">string</span>]<span class="type">string</span> <span class="string">`yaml:&quot;env&quot;`</span>                <span class="comment">// stdio only</span></span><br><span class="line">    URL     <span class="type">string</span>            <span class="string">`yaml:&quot;url&quot;`</span>                <span class="comment">// sse only</span></span><br><span class="line">    Headers <span class="keyword">map</span>[<span class="type">string</span>]<span class="type">string</span> <span class="string">`yaml:&quot;headers&quot;`</span>            <span class="comment">// sse only</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对应 YAML 大致长这样：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">mcp:</span></span><br><span class="line">  <span class="attr">servers:</span></span><br><span class="line">    <span class="attr">filesystem:</span></span><br><span class="line">      <span class="attr">type:</span> <span class="string">stdio</span></span><br><span class="line">      <span class="attr">command:</span> <span class="string">npx</span></span><br><span class="line">      <span class="attr">args:</span> [<span class="string">&quot;-y&quot;</span>, <span class="string">&quot;@modelcontextprotocol/server-filesystem&quot;</span>, <span class="string">&quot;/tmp&quot;</span>]</span><br><span class="line">    <span class="attr">remote-server:</span></span><br><span class="line">      <span class="attr">type:</span> <span class="string">sse</span></span><br><span class="line">      <span class="attr">url:</span> <span class="string">&quot;https://example.com/mcp/sse&quot;</span></span><br><span class="line">      <span class="attr">headers:</span></span><br><span class="line">        <span class="attr">Authorization:</span> <span class="string">&quot;Bearer $&#123;MCP_TOKEN&#125;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-Client-Manager：连接、发现、调用"><a href="#4-4-Client-Manager：连接、发现、调用" class="headerlink" title="4.4 Client Manager：连接、发现、调用"></a>4.4 Client Manager：连接、发现、调用</h3><p><code>MCPClientManager</code> 负责管理全局连接，核心是「按 name 维护 entry」：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> entry <span class="keyword">struct</span> &#123;</span><br><span class="line">    session *mcp.ClientSession</span><br><span class="line">    tools   []*mcp.Tool</span><br><span class="line">    cfg     types.MCPServerConfig</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> MCPClientManager <span class="keyword">struct</span> &#123;</span><br><span class="line">    mu      sync.RWMutex</span><br><span class="line">    entries <span class="keyword">map</span>[<span class="type">string</span>]*entry</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 连接：按 type 建 transport → Initialize → ListTools</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> Connect(ctx context.Context, name <span class="type">string</span>, cfg types.MCPServerConfig) <span class="type">error</span></span><br><span class="line"><span class="comment">// 工具发现：tools/list RPC</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> ListTools(name <span class="type">string</span>) ([]*mcp.Tool, <span class="type">error</span>)</span><br><span class="line"><span class="comment">// 工具调用：tools/call RPC</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> CallTool(ctx context.Context, name, toolName <span class="type">string</span>, args <span class="keyword">map</span>[<span class="type">string</span>]any) (types.ToolResult, <span class="type">error</span>)</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> Close(ctx context.Context) <span class="type">error</span></span><br></pre></td></tr></table></figure>
+
+<p>stdio 与 sse 的传输构建：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> transport mcp.Transport</span><br><span class="line"><span class="keyword">switch</span> cfg.Type &#123;</span><br><span class="line"><span class="keyword">case</span> <span class="string">&quot;stdio&quot;</span>:</span><br><span class="line">    cmd := exec.CommandContext(ctx, cfg.Command, cfg.Args...)</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(cfg.Env) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        env := cmd.Environ()</span><br><span class="line">        <span class="keyword">for</span> k, v := <span class="keyword">range</span> cfg.Env &#123;</span><br><span class="line">            env = <span class="built_in">append</span>(env, k+<span class="string">&quot;=&quot;</span>+v)</span><br><span class="line">        &#125;</span><br><span class="line">        cmd.Env = env</span><br><span class="line">    &#125;</span><br><span class="line">    transport = &amp;mcp.CommandTransport&#123;Command: cmd&#125;</span><br><span class="line"><span class="keyword">case</span> <span class="string">&quot;sse&quot;</span>:</span><br><span class="line">    t := &amp;mcp.SSEClientTransport&#123;Endpoint: cfg.URL&#125;</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(cfg.Headers) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        t.HTTPClient = &amp;http.Client&#123;</span><br><span class="line">            Transport: &amp;headerTransport&#123;base: http.DefaultTransport, headers: cfg.Headers&#125;,</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    transport = t</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-5-Tool-适配器：把-MCP-Tool-包装成本地-Tool"><a href="#4-5-Tool-适配器：把-MCP-Tool-包装成本地-Tool" class="headerlink" title="4.5 Tool 适配器：把 MCP Tool 包装成本地 Tool"></a>4.5 Tool 适配器：把 MCP Tool 包装成本地 Tool</h3><p><code>MCPTool</code> 实现 <code>types.Tool</code>，把 MCP 的描述与 JSON Schema 直接透传给 Agent：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(t *MCPTool)</span></span> ID() <span class="type">string</span>   &#123; <span class="keyword">return</span> <span class="string">&quot;mcp__&quot;</span> + t.serverName + <span class="string">&quot;__&quot;</span> + t.toolDef.Name &#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(t *MCPTool)</span></span> Name() <span class="type">string</span> &#123; <span class="keyword">return</span> t.ID() &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(t *MCPTool)</span></span> Description() <span class="type">string</span> &#123; <span class="keyword">return</span> t.toolDef.Description &#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(t *MCPTool)</span></span> Parameters() any    &#123; <span class="keyword">return</span> t.toolDef.InputSchema &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(t *MCPTool)</span></span> Execute(ctx context.Context, callID <span class="type">string</span>, args <span class="keyword">map</span>[<span class="type">string</span>]any, onUpdate types.UpdateFn) (types.ToolResult, <span class="type">error</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> t.manager.CallTool(ctx, t.serverName, t.toolDef.Name, args)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>结果转换规则：</p>
+<ul>
+<li><code>content[].type == &quot;text&quot;</code> → 写入 <code>ToolResult.Content</code>；</li>
+<li><code>isError == true</code> → 在 Content 中标注错误，<strong>不返回 Go error</strong>，交给模型自行处理。</li>
+</ul>
+<h3 id="4-6-Plugin-入口：连接失败不阻断启动"><a href="#4-6-Plugin-入口：连接失败不阻断启动" class="headerlink" title="4.6 Plugin 入口：连接失败不阻断启动"></a>4.6 Plugin 入口：连接失败不阻断启动</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *MCPPlugin)</span></span> Register(api types.PluginAPI) <span class="type">error</span> &#123;</span><br><span class="line">    ctx := context.Background()</span><br><span class="line">    <span class="keyword">for</span> name, serverCfg := <span class="keyword">range</span> p.cfg.Servers &#123;</span><br><span class="line">        <span class="keyword">if</span> err := p.manager.Connect(ctx, name, serverCfg); err != <span class="literal">nil</span> &#123;</span><br><span class="line">            log.Warnf(<span class="string">&quot;mcp: skipping server %q: %v&quot;</span>, name, err) <span class="comment">// 失败仅告警</span></span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        &#125;</span><br><span class="line">        tools, err := p.manager.ListTools(name)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            log.Warnf(<span class="string">&quot;mcp: cannot list tools for server %q: %v&quot;</span>, name, err)</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> _, t := <span class="keyword">range</span> tools &#123;</span><br><span class="line">            api.RegisterTool(&amp;MCPTool&#123;serverName: name, toolDef: t, manager: p.manager&#125;)</span><br><span class="line">        &#125;</span><br><span class="line">        log.Infof(<span class="string">&quot;mcp: server %q connected, %d tool(s) registered&quot;</span>, name, <span class="built_in">len</span>(tools))</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后在 <code>serve.go</code> 里按配置注册插件即可：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> <span class="built_in">len</span>(cfg.MCP.Servers) &gt; <span class="number">0</span> &#123;</span><br><span class="line">    pluginMgr.Add(mcp.NewMCPPlugin(cfg.MCP))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>到这一步，Agent 就已经能调用外部 MCP 工具了。</p>
+<hr>
+<h2 id="五、连接状态与断线重连"><a href="#五、连接状态与断线重连" class="headerlink" title="五、连接状态与断线重连"></a>五、连接状态与断线重连</h2><p>基础版有个明显短板：连接状态只在 <code>entries</code> map 里隐式记录（有 entry = 已连接），<strong>没有状态机、感知不到断线、断了只能重启</strong>。参考 Claude Code 补上这一层。</p>
+<h3 id="5-1-四态状态机"><a href="#5-1-四态状态机" class="headerlink" title="5.1 四态状态机"></a>5.1 四态状态机</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">connecting    首次连接中（启动或重连中）</span><br><span class="line">connected     连接正常，工具已注册</span><br><span class="line">reconnecting  连接断开，正在退避等待重连（含重试次数）</span><br><span class="line">failed        已达最大重试次数，放弃重连</span><br></pre></td></tr></table></figure>
+
+<p>状态转换：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[启动]        → connecting</span><br><span class="line">connecting    → connected       (Connect 成功)</span><br><span class="line">connecting    → reconnecting    (Connect 失败，attempt &lt; max)</span><br><span class="line">connecting    → failed         (Connect 失败，attempt &gt;= max)</span><br><span class="line">connected     → reconnecting    (CallTool 返回 transport 错误)</span><br><span class="line">reconnecting  → connecting      (backoff 结束，下次尝试)</span><br><span class="line">reconnecting  → failed         (attempt &gt;= max)</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-扩展-entry：承载状态与重连控制"><a href="#5-2-扩展-entry：承载状态与重连控制" class="headerlink" title="5.2 扩展 entry：承载状态与重连控制"></a>5.2 扩展 entry：承载状态与重连控制</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MCPServerStatus <span class="type">string</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    MCPStatusConnecting   MCPServerStatus = <span class="string">&quot;connecting&quot;</span></span><br><span class="line">    MCPStatusConnected    MCPServerStatus = <span class="string">&quot;connected&quot;</span></span><br><span class="line">    MCPStatusReconnecting MCPServerStatus = <span class="string">&quot;reconnecting&quot;</span></span><br><span class="line">    MCPStatusFailed       MCPServerStatus = <span class="string">&quot;failed&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> entry <span class="keyword">struct</span> &#123;</span><br><span class="line">    session          *mcp.ClientSession</span><br><span class="line">    tools            []*mcp.Tool</span><br><span class="line">    cfg              types.MCPServerConfig <span class="comment">// 保存配置供重连使用</span></span><br><span class="line">    status           MCPServerStatus</span><br><span class="line">    reconnectAttempt <span class="type">int</span></span><br><span class="line">    lastError        <span class="type">string</span></span><br><span class="line">    cancelReconnect  context.CancelFunc    <span class="comment">// 取消在途重连 goroutine</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对外提供快照查询，供推送和 TUI 使用：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MCPServerInfo <span class="keyword">struct</span> &#123;</span><br><span class="line">    Name             <span class="type">string</span>          <span class="string">`json:&quot;name&quot;`</span></span><br><span class="line">    Status           MCPServerStatus <span class="string">`json:&quot;status&quot;`</span></span><br><span class="line">    ReconnectAttempt <span class="type">int</span>             <span class="string">`json:&quot;reconnect_attempt,omitempty&quot;`</span></span><br><span class="line">    Error            <span class="type">string</span>          <span class="string">`json:&quot;error,omitempty&quot;`</span></span><br><span class="line">    ToolCount        <span class="type">int</span>             <span class="string">`json:&quot;tool_count&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> GetServerStatuses() []MCPServerInfo</span><br></pre></td></tr></table></figure>
+
+<p>状态变更通过回调往外抛，Manager 不关心谁在听：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MCPClientManager)</span></span> SetOnStatusChange(fn <span class="function"><span class="keyword">func</span><span class="params">(<span class="type">string</span>, MCPServerStatus, <span class="type">string</span>)</span></span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-指数退避"><a href="#5-3-指数退避" class="headerlink" title="5.3 指数退避"></a>5.3 指数退避</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    maxReconnectAttempts = <span class="number">5</span></span><br><span class="line">    initialBackoffMS     = <span class="number">1</span>_000  <span class="comment">// 1s</span></span><br><span class="line">    maxBackoffMS         = <span class="number">30</span>_000 <span class="comment">// 30s</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 等待序列：1s → 2s → 4s → 8s → 16s（上限 30s）</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">backoffDuration</span><span class="params">(attempt <span class="type">int</span>)</span></span> time.Duration &#123;</span><br><span class="line">    ms := initialBackoffMS * (<span class="number">1</span> &lt;&lt; <span class="type">uint</span>(attempt))</span><br><span class="line">    <span class="keyword">if</span> ms &gt; maxBackoffMS &#123;</span><br><span class="line">        ms = maxBackoffMS</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> time.Duration(ms) * time.Millisecond</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-触发条件与重连循环"><a href="#5-4-触发条件与重连循环" class="headerlink" title="5.4 触发条件与重连循环"></a>5.4 触发条件与重连循环</h3><p>采用<strong>被动触发</strong>：<code>CallTool</code> 返回 transport 层错误时（区别于 <code>res.IsError = true</code> 的工具执行错误）触发重连，暂不做主动心跳。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">res, err := e.session.CallTool(callCtx, &amp;mcp.CallToolParams&#123;Name: toolName, Arguments: arguments&#125;)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    <span class="comment">// transport 层失败 —— 后台触发重连</span></span><br><span class="line">    <span class="keyword">go</span> m.triggerReconnect(serverName, err)</span><br><span class="line">    <span class="keyword">return</span> types.ToolResult&#123;IsError: <span class="literal">true</span>, Content: []types.ContentBlock&#123;</span><br><span class="line">        &#123;Type: <span class="string">&quot;text&quot;</span>, Text: fmt.Sprintf(<span class="string">&quot;tool call failed (reconnecting): %v&quot;</span>, err)&#125;,</span><br><span class="line">    &#125;&#125;, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>重连 goroutine 的核心逻辑：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">触发: CallTool err != nil</span><br><span class="line">  1. 加锁：status = reconnecting，attempt++，记录 lastError</span><br><span class="line">  2. 调用 onStatusChange</span><br><span class="line">  3. 启动 goroutine（携带 cancelCtx）：</span><br><span class="line">       loop:</span><br><span class="line">         sleep backoff(attempt)</span><br><span class="line">         尝试 Connect()</span><br><span class="line">         成功 → status = connected，重新 ListTools，更新 tools，通知，退出</span><br><span class="line">         失败 → attempt++</span><br><span class="line">                if attempt &gt;= max → status = failed，通知，退出</span><br><span class="line">                else → 继续 loop</span><br></pre></td></tr></table></figure>
+
+<p>两个容易忽略的点：</p>
+<ul>
+<li><strong><code>Close()</code> 时必须取消在途 goroutine</strong>（调用所有 <code>cancelReconnect()</code>），否则会有泄漏的 goroutine 一直重试；</li>
+<li><strong>状态上报前不要持锁</strong>，避免回调里再访问 Manager 造成死锁。</li>
+</ul>
+<hr>
+<h2 id="六、状态推送与-TUI-展示"><a href="#六、状态推送与-TUI-展示" class="headerlink" title="六、状态推送与 TUI 展示"></a>六、状态推送与 TUI 展示</h2><h3 id="6-1-新增一个全局事件"><a href="#6-1-新增一个全局事件" class="headerlink" title="6.1 新增一个全局事件"></a>6.1 新增一个全局事件</h3><p>状态不属于任何单个 session，所以需要一个「广播给所有连接」的通道：</p>
+<ul>
+<li><code>pkg/types/event.go</code> 新增 <code>EventMCPStatus = &quot;mcp_status&quot;</code>；</li>
+<li>gateway 新增 <code>BroadcastAll</code> / <code>BroadcastGlobal</code>，向所有 WebSocket 连接推送；</li>
+<li><code>MCPPlugin</code> 通过 <code>SetBroadcaster()</code> 注入广播函数，在 <code>onStatusChange</code> 里组装全量快照后推送。</li>
+</ul>
+<p>Payload 采用全量推送（TUI 直接替换本地状态，不做 diff）：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;mcp_status&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;servers&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;filesystem&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;status&quot;</span><span class="punctuation">:</span> <span class="string">&quot;connected&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;tool_count&quot;</span><span class="punctuation">:</span> <span class="number">5</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;my-api&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;status&quot;</span><span class="punctuation">:</span> <span class="string">&quot;reconnecting&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;reconnect_attempt&quot;</span><span class="punctuation">:</span> <span class="number">2</span><span class="punctuation">,</span> <span class="attr">&quot;error&quot;</span><span class="punctuation">:</span> <span class="string">&quot;EOF&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="punctuation">&#123;</span> <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;broken-svc&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;status&quot;</span><span class="punctuation">:</span> <span class="string">&quot;failed&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;error&quot;</span><span class="punctuation">:</span> <span class="string">&quot;connection refused&quot;</span> <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">]</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>发送时机：启动后首次连接结束时推一次，之后任意状态变更各推一次。</p>
+<h3 id="6-2-TUI-状态栏"><a href="#6-2-TUI-状态栏" class="headerlink" title="6.2 TUI 状态栏"></a>6.2 TUI 状态栏</h3><p>TUI 收到 <code>mcp_status</code> 后更新 <code>state.mcpServers</code>，并按状态着色渲染一行摘要：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** 生成 MCP 状态摘要行，如 &quot;MCP: 3 connected · 1 reconnecting&quot; */</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">buildMcpStatusLine</span>(<span class="params">servers: MCPServerInfo[]</span>): <span class="built_in">string</span> &#123;</span><br><span class="line">  <span class="keyword">if</span> (servers.<span class="property">length</span> === <span class="number">0</span>) <span class="keyword">return</span> <span class="string">&quot;&quot;</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> counts = &#123; <span class="attr">connecting</span>: <span class="number">0</span>, <span class="attr">connected</span>: <span class="number">0</span>, <span class="attr">reconnecting</span>: <span class="number">0</span>, <span class="attr">failed</span>: <span class="number">0</span> &#125;;</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">const</span> s <span class="keyword">of</span> servers) counts[s.<span class="property">status</span>]++;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> <span class="attr">parts</span>: <span class="built_in">string</span>[] = [];</span><br><span class="line">  <span class="keyword">if</span> (counts.<span class="property">connected</span>)    parts.<span class="title function_">push</span>(chalk.<span class="title function_">green</span>(<span class="string">`<span class="subst">$&#123;counts.connected&#125;</span> connected`</span>));</span><br><span class="line">  <span class="keyword">if</span> (counts.<span class="property">reconnecting</span>) parts.<span class="title function_">push</span>(chalk.<span class="title function_">yellow</span>(<span class="string">`<span class="subst">$&#123;counts.reconnecting&#125;</span> reconnecting`</span>));</span><br><span class="line">  <span class="keyword">if</span> (counts.<span class="property">failed</span>)       parts.<span class="title function_">push</span>(chalk.<span class="title function_">red</span>(<span class="string">`<span class="subst">$&#123;counts.failed&#125;</span> failed`</span>));</span><br><span class="line">  <span class="keyword">if</span> (counts.<span class="property">connecting</span>)   parts.<span class="title function_">push</span>(chalk.<span class="title function_">dim</span>(<span class="string">`<span class="subst">$&#123;counts.connecting&#125;</span> connecting`</span>));</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> parts.<span class="property">length</span> &gt; <span class="number">0</span> ? <span class="string">`MCP: <span class="subst">$&#123;parts.join(<span class="string">&quot; · &quot;</span>)&#125;</span>`</span> : <span class="string">&quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>效果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">opengiraffe tui  ● ws://localhost:9090/ws  session:new</span><br><span class="line">MCP: 3 connected · 1 reconnecting</span><br></pre></td></tr></table></figure>
+
+<p>颜色约定：<code>connected</code> 绿、<code>reconnecting</code> 黄、<code>failed</code> 红、<code>connecting</code> 灰；计数为 0 的状态不显示，没有 MCP 配置时不显示该行。</p>
+<hr>
+<h2 id="七、验证方案"><a href="#七、验证方案" class="headerlink" title="七、验证方案"></a>七、验证方案</h2><p><strong>单元测试</strong>（<code>internal/mcp/manager_test.go</code>）覆盖：</p>
+<ul>
+<li><code>backoffDuration</code> 序列：1s / 2s / 4s / 8s / 16s，超出后封顶 30s；</li>
+<li><code>GetServerStatuses</code> 空集与快照；</li>
+<li><code>SetOnStatusChange</code> 回调触发顺序、未设置回调时空转不 panic；</li>
+<li><code>triggerReconnect</code> 在已 <code>reconnecting</code> 状态下的幂等（no-op）。</li>
+</ul>
+<p><strong>编译与测试命令</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> opengiraffe</span><br><span class="line">go build ./...</span><br><span class="line">go <span class="built_in">test</span> ./internal/mcp/... -race -count=1</span><br><span class="line">golangci-lint run ./internal/mcp/...</span><br></pre></td></tr></table></figure>
+
+<p><strong>集成验证（手动）</strong>：</p>
+<ol>
+<li><code>npx -y @modelcontextprotocol/server-filesystem /tmp</code> 起一个 filesystem server；</li>
+<li>在 <code>configs/instance.local.yaml</code> 配置 stdio server；</li>
+<li>启动 opengiraffe + TUI，确认状态栏出现 <code>MCP: 1 connected</code>；</li>
+<li>向 Agent 提问 <code>/tmp</code> 目录内容，确认能调用 <code>mcp__filesystem__list_directory</code> 并返回结果；</li>
+<li>kill 掉 MCP 子进程，确认状态栏变为 <code>MCP: 1 reconnecting</code> 并随后自动恢复。</li>
+</ol>
+<hr>
+<h2 id="八、风险与注意事项"><a href="#八、风险与注意事项" class="headerlink" title="八、风险与注意事项"></a>八、风险与注意事项</h2><ol>
+<li><strong>官方 Go SDK API 仍在演进</strong>：<code>modelcontextprotocol/go-sdk</code> 的 <code>ListTools</code> / <code>CallTool</code> 方法签名需要以实际版本为准。</li>
+<li><strong>stdio 子进程管理</strong>：stdio server 是子进程，必须在 <code>Shutdown()</code> 中正确关闭，避免僵尸进程。</li>
+<li><strong>并发安全</strong>：多个 session 并发调用同一 MCP tool 时，Client 需线程安全（官方 SDK 应保证），Manager 的 <code>entries</code> 用 <code>RWMutex</code> 保护。</li>
+<li><strong>超时控制</strong>：工具调用需设合理超时（建议 30s），防止 MCP Server 无响应把 Agent loop 拖死。</li>
+<li><strong>本期不含</strong>：主动心跳、<code>/mcp reconnect</code> 手动重连命令、<code>disabled</code> 开关、<code>needs-auth</code>（OAuth 未实现）。</li>
+</ol>
+<hr>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>整个接入可以拆成两层：</p>
+<ul>
+<li><strong>能力层</strong>：一个 Plugin + 一个 Manager + 一个 Tool 适配器，就把任意 MCP Server 的工具变成了 Agent 的本地工具，命名统一为 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>；</li>
+<li><strong>可靠性层</strong>：四态状态机 + 指数退避重连 + 全局事件广播，让「Server 挂了」从「必须重启服务」变成「状态栏上一行黄字，几十秒后自己恢复」。</li>
+</ul>
+<p>参考成熟实现（Claude Code）能少走很多弯路，但<strong>适配自家的 Plugin / 事件 / 配置体系才是真正的工作量</strong>——这也是把外部方案「抄」进自己项目时最有价值的部分。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/AI/" rel="tag"># AI</a>
+              <a href="/tags/MCP/" rel="tag"># MCP</a>
+              <a href="/tags/Go/" rel="tag"># Go</a>
+              <a href="/tags/Agent/" rel="tag"># Agent</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/26/%E7%A7%BB%E5%8A%A8%E7%AB%AF%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E9%80%89%E5%9E%8B%E4%B8%8E%E5%8E%9F%E7%90%86%E6%96%87%E6%A1%A3/" rel="prev" title="移动端自动化测试选型与原理文档">
+      <i class="fa fa-chevron-left"></i> 移动端自动化测试选型与原理文档
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA-Go-Agent-%E5%AE%9E%E7%8E%B0-MCP-Client%EF%BC%9A%E5%B7%A5%E5%85%B7%E6%8E%A5%E5%85%A5%E3%80%81%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E"><span class="nav-number">1.</span> <span class="nav-text">为 Go Agent 实现 MCP Client：工具接入、状态管理与断线重连</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%85%88%E5%88%86%E6%B8%85-MCP-%E7%9A%84%E4%B8%89%E6%96%B9%E8%A7%92%E8%89%B2"><span class="nav-number">1.2.</span> <span class="nav-text">一、先分清 MCP 的三方角色</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Claude-Code-%E7%9A%84-MCP-%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90"><span class="nav-number">1.3.</span> <span class="nav-text">二、Claude Code 的 MCP 实现分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="nav-number">1.3.1.</span> <span class="nav-text">2.1 核心数据流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%85%B3%E9%94%AE%E6%96%87%E4%BB%B6"><span class="nav-number">1.3.2.</span> <span class="nav-text">2.2 关键文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%B8%A4%E4%B8%AA%E5%80%BC%E5%BE%97%E6%8A%84%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.3.3.</span> <span class="nav-text">2.3 两个值得抄的设计</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81opengiraffe-%E7%9A%84%E6%89%A9%E5%B1%95%E7%82%B9"><span class="nav-number">1.4.</span> <span class="nav-text">三、opengiraffe 的扩展点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%A1%88%EF%BC%9A%E6%8A%8A-MCP-Server-%E5%8F%98%E6%88%90%E4%B8%80%E5%A0%86-Tool"><span class="nav-number">1.5.</span> <span class="nav-text">四、实现方案：把 MCP Server 变成一堆 Tool</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%80%89%E5%9E%8B%E5%86%B3%E7%AD%96"><span class="nav-number">1.5.1.</span> <span class="nav-text">4.1 选型决策</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E8%BF%9E%E6%8E%A5%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="nav-number">1.5.2.</span> <span class="nav-text">4.2 连接生命周期</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%85%8D%E7%BD%AE%E7%B1%BB%E5%9E%8B%EF%BC%9A%E6%89%A9%E4%B8%80%E4%B8%AA-MCPConfig"><span class="nav-number">1.5.3.</span> <span class="nav-text">4.3 配置类型：扩一个 MCPConfig</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-Client-Manager%EF%BC%9A%E8%BF%9E%E6%8E%A5%E3%80%81%E5%8F%91%E7%8E%B0%E3%80%81%E8%B0%83%E7%94%A8"><span class="nav-number">1.5.4.</span> <span class="nav-text">4.4 Client Manager：连接、发现、调用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-Tool-%E9%80%82%E9%85%8D%E5%99%A8%EF%BC%9A%E6%8A%8A-MCP-Tool-%E5%8C%85%E8%A3%85%E6%88%90%E6%9C%AC%E5%9C%B0-Tool"><span class="nav-number">1.5.5.</span> <span class="nav-text">4.5 Tool 适配器：把 MCP Tool 包装成本地 Tool</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-6-Plugin-%E5%85%A5%E5%8F%A3%EF%BC%9A%E8%BF%9E%E6%8E%A5%E5%A4%B1%E8%B4%A5%E4%B8%8D%E9%98%BB%E6%96%AD%E5%90%AF%E5%8A%A8"><span class="nav-number">1.5.6.</span> <span class="nav-text">4.6 Plugin 入口：连接失败不阻断启动</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E8%BF%9E%E6%8E%A5%E7%8A%B6%E6%80%81%E4%B8%8E%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E"><span class="nav-number">1.6.</span> <span class="nav-text">五、连接状态与断线重连</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%9B%9B%E6%80%81%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="nav-number">1.6.1.</span> <span class="nav-text">5.1 四态状态机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%89%A9%E5%B1%95-entry%EF%BC%9A%E6%89%BF%E8%BD%BD%E7%8A%B6%E6%80%81%E4%B8%8E%E9%87%8D%E8%BF%9E%E6%8E%A7%E5%88%B6"><span class="nav-number">1.6.2.</span> <span class="nav-text">5.2 扩展 entry：承载状态与重连控制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%8C%87%E6%95%B0%E9%80%80%E9%81%BF"><span class="nav-number">1.6.3.</span> <span class="nav-text">5.3 指数退避</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E8%A7%A6%E5%8F%91%E6%9D%A1%E4%BB%B6%E4%B8%8E%E9%87%8D%E8%BF%9E%E5%BE%AA%E7%8E%AF"><span class="nav-number">1.6.4.</span> <span class="nav-text">5.4 触发条件与重连循环</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E7%8A%B6%E6%80%81%E6%8E%A8%E9%80%81%E4%B8%8E-TUI-%E5%B1%95%E7%A4%BA"><span class="nav-number">1.7.</span> <span class="nav-text">六、状态推送与 TUI 展示</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%96%B0%E5%A2%9E%E4%B8%80%E4%B8%AA%E5%85%A8%E5%B1%80%E4%BA%8B%E4%BB%B6"><span class="nav-number">1.7.1.</span> <span class="nav-text">6.1 新增一个全局事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-TUI-%E7%8A%B6%E6%80%81%E6%A0%8F"><span class="nav-number">1.7.2.</span> <span class="nav-text">6.2 TUI 状态栏</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%AA%8C%E8%AF%81%E6%96%B9%E6%A1%88"><span class="nav-number">1.8.</span> <span class="nav-text">七、验证方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%A3%8E%E9%99%A9%E4%B8%8E%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.9.</span> <span class="nav-text">八、风险与注意事项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.10.</span> <span class="nav-text">小结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">16</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
