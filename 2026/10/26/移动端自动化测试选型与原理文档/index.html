@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="整理人：内部技术交流主题：XCTest &#x2F; XCUITest &#x2F; WDA &#x2F; Appium &#x2F; Fastbot &#x2F; Flutter混合栈自动化目标：理清底层依赖、差异、适用场景、成熟Flutter混合项目落地方案">
+<meta property="og:type" content="article">
+<meta property="og:title" content="移动端自动化测试选型与原理文档">
+<meta property="og:url" content="https://lijifeng168.com/2026/10/26/%E7%A7%BB%E5%8A%A8%E7%AB%AF%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E9%80%89%E5%9E%8B%E4%B8%8E%E5%8E%9F%E7%90%86%E6%96%87%E6%A1%A3/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="整理人：内部技术交流主题：XCTest &#x2F; XCUITest &#x2F; WDA &#x2F; Appium &#x2F; Fastbot &#x2F; Flutter混合栈自动化目标：理清底层依赖、差异、适用场景、成熟Flutter混合项目落地方案">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T03:46:55.000Z">
+<meta property="article:modified_time" content="2026-10-26T03:46:55.630Z">
+<meta property="article:author" content="lijifeng">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/10/26/%E7%A7%BB%E5%8A%A8%E7%AB%AF%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E9%80%89%E5%9E%8B%E4%B8%8E%E5%8E%9F%E7%90%86%E6%96%87%E6%A1%A3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>移动端自动化测试选型与原理文档 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/%E7%A7%BB%E5%8A%A8%E7%AB%AF%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E9%80%89%E5%9E%8B%E4%B8%8E%E5%8E%9F%E7%90%86%E6%96%87%E6%A1%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          移动端自动化测试选型与原理文档
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-10-26 11:46:55" itemprop="dateCreated datePublished" datetime="2026-10-26T11:46:55+08:00">2026-10-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>整理人：内部技术交流<br>主题：XCTest / XCUITest / WDA / Appium / Fastbot / Flutter混合栈自动化<br>目标：理清底层依赖、差异、适用场景、成熟Flutter混合项目落地方案</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="一、核心组件关系总览"><a href="#一、核心组件关系总览" class="headerlink" title="一、核心组件关系总览"></a>一、核心组件关系总览</h2><ol>
+<li><p><strong>XCTest</strong>：苹果官方测试底座框架</p>
+<ul>
+<li>能力：单元测试、性能测试、集成测试</li>
+<li>XCUITest 是 XCTest 的UI测试扩展，专门做iOS界面自动化</li>
+<li>底层依赖：iOS无障碍体系（VoiceOver），依靠 accessibilityIdentifier 定位控件</li>
+<li>运行方式：在Xcode工程内执行，自带录制功能，录制生成 Swift / Objective‑C 代码</li>
+<li>短板：<strong>必须持有源码工程</strong>，测试人员很难独立使用，不适合跨平台回归</li>
+</ul>
+</li>
+<li><p><strong>WDA（WebDriverAgent）</strong></p>
+<ul>
+<li>来源：Facebook开源，现由Appium团队维护，<strong>不属于谷歌</strong></li>
+<li>本质：基于XCUITest实现、安装在iOS手机上的HTTP服务</li>
+<li>职责：接收外部指令，调用系统XCUITest能力操控App，返回控件树、执行结果</li>
+<li>定位：iOS侧 Appium、Fastbot 的底层执行器</li>
+</ul>
+</li>
+<li><p><strong>Appium</strong></p>
+<ul>
+<li>架构：C/S架构，<strong>必须启动 Appium Server 中间服务</strong></li>
+<li>执行链路：测试脚本(Python/Java/JS) → Appium Server → 协议转换<ul>
+<li>Android：转发给 UiAutomator2</li>
+<li>iOS：转发给手机上的 WDA</li>
+</ul>
+</li>
+<li>能力：Appium Inspector 支持录制操作，直接生成对应语言脚本</li>
+<li>报错机制：控制台抛出异常堆栈；支持截图、日志面板直观展示失败步骤</li>
+<li>优势：不需要源码，仅需要测试包；一套协议兼容安卓&amp;iOS，容易接入CI</li>
+</ul>
+</li>
+<li><p><strong>Fastbot（字节自动遍历工具）</strong></p>
+<ul>
+<li>定位：偏向<strong>稳定性测试、自动遍历、页面覆盖率统计</strong>，不适合写定制回归脚本</li>
+<li>Android：原生能力强，可以直接采集打开过的Activity类名、页面访问清单、覆盖率</li>
+<li>iOS：默认仅能拿到页面标题；<strong>想要VC类级别的覆盖率，需要集成配套Shoots插桩SDK</strong></li>
+<li>底层：iOS同样依赖WDA与无障碍通道；内置遍历调度和指令转换逻辑（算法闭源）</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>一句话总结区分</p>
+<ul>
+<li>XCUITest：苹果原生UI测试，绑定源码，产出Swift/OC</li>
+<li>WDA：把XCUITest封装成HTTP服务，供外部工具调用</li>
+<li>Appium：跨平台中间服务，统一WebDriver协议，对接UiAutomator2 / WDA</li>
+<li>Fastbot：自动遍历工具，复用底层驱动，主打稳定性、页面覆盖率</li>
+</ul>
+</blockquote>
+<h2 id="二、Flutter-混合栈自动化专项（重点）"><a href="#二、Flutter-混合栈自动化专项（重点）" class="headerlink" title="二、Flutter 混合栈自动化专项（重点）"></a>二、Flutter 混合栈自动化专项（重点）</h2><h3 id="2-1-Flutter无障碍ID历史问题"><a href="#2-1-Flutter无障碍ID历史问题" class="headerlink" title="2.1 Flutter无障碍ID历史问题"></a>2.1 Flutter无障碍ID历史问题</h3><ul>
+<li>Flutter 3.19（2024-02-15发布）之前：默认不向系统无障碍通道暴露控件ID，WDA / UiAutomator2 原生拿不到控件</li>
+<li>Flutter 3.19及以上：支持通过外层包裹 <code>Semantics</code> 组件并设置identifier，向外暴露 accessibilityIdentifier</li>
+<li>⚠️ 成熟存量项目不建议全页面批量新增Semantics，改动成本极高</li>
+</ul>
+<h3 id="2-2-推荐方案：appium-flutter-driver"><a href="#2-2-推荐方案：appium-flutter-driver" class="headerlink" title="2.2 推荐方案：appium-flutter-driver"></a>2.2 推荐方案：appium-flutter-driver</h3><blockquote>
+<p>它<strong>不是替换Appium，是Appium的扩展插件</strong></p>
+</blockquote>
+<ul>
+<li>原理：<ul>
+<li>Flutter页面：穿透Flutter渲染层，直接读取Flutter内部Widget Key定位控件，<strong>无需修改业务代码</strong></li>
+<li>Native页面：自动降级回原生驱动（iOS走WDA，安卓走UiAutomator2）读取 accessibilityId</li>
+</ul>
+</li>
+<li>接入步骤：<ol>
+<li>在PC端给Appium安装flutter-driver插件</li>
+<li>测试脚本内指定使用FlutterDriver</li>
+<li>原有WDA、安卓调试环境保持不变</li>
+</ol>
+</li>
+</ul>
+<h2 id="三、录制能力横向对比"><a href="#三、录制能力横向对比" class="headerlink" title="三、录制能力横向对比"></a>三、录制能力横向对比</h2><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>录制输出</th>
+<th>依赖条件</th>
+<th>适合场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Xcode XCUITest录制</td>
+<td>Swift / OC 代码</td>
+<td>App源码工程</td>
+<td>开发自测、简单UI用例</td>
+</tr>
+<tr>
+<td>Appium Inspector录制</td>
+<td>Python / Java / JS 脚本</td>
+<td>Appium Server + WDA/UiAutomator2</td>
+<td>测试人员编写回归用例</td>
+</tr>
+<tr>
+<td>Fastbot</td>
+<td>不产出业务脚本</td>
+<td>WDA/UiAutomator2</td>
+<td>自动遍历、稳定性压测</td>
+</tr>
+</tbody></table>
+<h2 id="四、项目选型建议（Flutter-Native-混合成熟项目）"><a href="#四、项目选型建议（Flutter-Native-混合成熟项目）" class="headerlink" title="四、项目选型建议（Flutter + Native 混合成熟项目）"></a>四、项目选型建议（Flutter + Native 混合成熟项目）</h2><ol>
+<li>功能回归自动化：<strong>Appium + appium-flutter-driver</strong><ul>
+<li>优点：业务代码无侵入，一套环境同时覆盖Flutter页面和原生页面</li>
+</ul>
+</li>
+<li>稳定性测试、页面遍历、覆盖率采集：<strong>Fastbot</strong><ul>
+<li>iOS注意事项：需要VC类名覆盖率报告时，集成Shoots插桩SDK</li>
+</ul>
+</li>
+<li>开发快速自测：XCUITest（仅限有源码场景）</li>
+<li>不推荐：存量大型Flutter项目全局补Semantics标记；仅核心路径按需补充</li>
+</ol>
+<h2 id="五、高频误区汇总"><a href="#五、高频误区汇总" class="headerlink" title="五、高频误区汇总"></a>五、高频误区汇总</h2><ol>
+<li>❌ WDA、Appium 不是谷歌产品；谷歌仅提供安卓 UiAutomator</li>
+<li>❌ Appium脚本不能直连WDA，必须经过Appium Server做协议转换</li>
+<li>❌ Flutter driver不能独立工作，是Appium插件</li>
+<li>❌ Fastbot iOS默认拿不到VC类名，需要额外插桩SDK；安卓原生直接拿到Activity</li>
+<li>❌ XCUITest ≠ XCTest：XCTest是底座，XCUITest只是它UI方向的扩展</li>
+</ol>
+<h2 id="六、可选配套材料（如需可以单独生成）"><a href="#六、可选配套材料（如需可以单独生成）" class="headerlink" title="六、可选配套材料（如需可以单独生成）"></a>六、可选配套材料（如需可以单独生成）</h2><ul>
+<li>Appium Flutter Driver 启动配置样例脚本</li>
+<li>Fastbot iOS Shoots SDK 接入检查清单</li>
+<li>混合栈自动化环境部署检查清单</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/04/27/flutter-%E9%9A%8F%E6%84%8F%E7%AC%94%E8%AE%B0/" rel="prev" title="flutter 随意笔记">
+      <i class="fa fa-chevron-left"></i> flutter 随意笔记
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6%E5%85%B3%E7%B3%BB%E6%80%BB%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">一、核心组件关系总览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Flutter-%E6%B7%B7%E5%90%88%E6%A0%88%E8%87%AA%E5%8A%A8%E5%8C%96%E4%B8%93%E9%A1%B9%EF%BC%88%E9%87%8D%E7%82%B9%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">二、Flutter 混合栈自动化专项（重点）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Flutter%E6%97%A0%E9%9A%9C%E7%A2%8DID%E5%8E%86%E5%8F%B2%E9%97%AE%E9%A2%98"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 Flutter无障碍ID历史问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%8E%A8%E8%8D%90%E6%96%B9%E6%A1%88%EF%BC%9Aappium-flutter-driver"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 推荐方案：appium-flutter-driver</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%BD%95%E5%88%B6%E8%83%BD%E5%8A%9B%E6%A8%AA%E5%90%91%E5%AF%B9%E6%AF%94"><span class="nav-number">3.</span> <span class="nav-text">三、录制能力横向对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%A1%B9%E7%9B%AE%E9%80%89%E5%9E%8B%E5%BB%BA%E8%AE%AE%EF%BC%88Flutter-Native-%E6%B7%B7%E5%90%88%E6%88%90%E7%86%9F%E9%A1%B9%E7%9B%AE%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">四、项目选型建议（Flutter + Native 混合成熟项目）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%AB%98%E9%A2%91%E8%AF%AF%E5%8C%BA%E6%B1%87%E6%80%BB"><span class="nav-number">5.</span> <span class="nav-text">五、高频误区汇总</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E5%8F%AF%E9%80%89%E9%85%8D%E5%A5%97%E6%9D%90%E6%96%99%EF%BC%88%E5%A6%82%E9%9C%80%E5%8F%AF%E4%BB%A5%E5%8D%95%E7%8B%AC%E7%94%9F%E6%88%90%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">六、可选配套材料（如需可以单独生成）</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
