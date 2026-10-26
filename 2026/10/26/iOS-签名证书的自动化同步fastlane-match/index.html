@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="背景工程有两个 Apple 账号、五个区域 target（CN &#x2F; Global &#x2F; TW &#x2F; JP &#x2F; SEJ），每个 target 还带一个 Widget 扩展；签名类型又分 appstore &#x2F; adhoc &#x2F; development。也就是几十套「证书 + 描述文件」的组合，全部靠人工在各台机器上维护。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 签名证书的自动化同步（fastlane match）">
+<meta property="og:url" content="https://lijifeng168.com/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5fastlane-match/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="背景工程有两个 Apple 账号、五个区域 target（CN &#x2F; Global &#x2F; TW &#x2F; JP &#x2F; SEJ），每个 target 还带一个 Widget 扩展；签名类型又分 appstore &#x2F; adhoc &#x2F; development。也就是几十套「证书 + 描述文件」的组合，全部靠人工在各台机器上维护。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-26T15:40:00.000Z">
+<meta property="article:modified_time" content="2026-10-26T15:27:01.095Z">
+<meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="iOS、fastlane、证书、CI">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5fastlane-match/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>iOS 签名证书的自动化同步（fastlane match） | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5fastlane-match/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          iOS 签名证书的自动化同步（fastlane match）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-26 23:40:00 / 修改时间：23:27:01" itemprop="dateCreated datePublished" datetime="2026-10-26T23:40:00+08:00">2026-10-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>工程有两个 Apple 账号、五个区域 target（CN / Global / TW / JP / SEJ），每个 target 还带一个 Widget 扩展；签名类型又分 appstore / adhoc / development。也就是几十套「证书 + 描述文件」的组合，全部靠人工在各台机器上维护。</p>
+<span id="more"></span>
+
+<p>真正的问题不是「手动操作麻烦」，而是<strong>状态没人对得上</strong>：</p>
+<ul>
+<li>证书有三类有效期，各自独立；</li>
+<li>描述文件里绑着设备列表，加一台设备就要重建；</li>
+<li>设备本身还有启用 / 禁用的状态。</li>
+</ul>
+<p>这三样分头变化，任何一环没传到打包机上，结果都是「包能打出来，但装不上」——<strong>而且全程不报错</strong>。</p>
+<p>一次典型事故：<code>umu_en_ad</code> 的新版描述文件（97 台设备）在 7-30 生成并提交进仓库，但 11 天里没被装到任何一台打包机上。8-05 打出来的包，里面嵌的还是旧版本（96 台），新注册的那台设备一直装不上测试包。整个过程零报警，因为打包确实成功了，只是签错了文件。</p>
+<p>自动化就是为了消掉这个人工环节。</p>
+<h2 id="整体模型"><a href="#整体模型" class="headerlink" title="整体模型"></a>整体模型</h2><p>证书不散落在各人电脑上，全部加密存在私有 Git 仓库，按 Apple 账号分两条分支：</p>
+<table>
+<thead>
+<tr>
+<th>Team ID</th>
+<th>Team Name</th>
+<th>覆盖区域</th>
+<th>match 分支</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SHV56P72QA</code></td>
+<td>Beijing UMU Technology CO.LTD.</td>
+<td>CN</td>
+<td><code>release/cn</code></td>
+</tr>
+<tr>
+<td><code>9N777LKWZK</code></td>
+<td>UMU Technology Co., Limited</td>
+<td>Global / TW / JP / SEJ</td>
+<td><code>release/global</code></td>
+</tr>
+</tbody></table>
+<ul>
+<li>仓库：<code>git@git.umu.work:usd/ios-certificates.git</code>，<code>storage_mode(&quot;git&quot;)</code>。</li>
+<li><code>team_id</code> 和 <code>git_branch</code> 不写死在 <code>Matchfile</code> 里，由命令行传入。</li>
+<li>分支名必须带 <code>release/</code> 前缀，因为 GitLab 的 pre-receive hook 要求分支以 <code>master|feature|dev|hotfix|release</code> 开头。</li>
+<li>解密口令 <code>MATCH_PASSWORD</code> 团队共享。</li>
+<li>明确定位：SEJ 的 <code>com.umu.ates</code> 在 <code>9N777LKWZK</code> 名下，归本项目管；走客户方独立账号的 <code>jp.co.sej.ssc.app.ates</code> 和 <code>com.sekisuihouse.umu</code> 不纳管。</li>
+</ul>
+<p>两个关键设计决定：</p>
+<ol>
+<li><strong>按账号分分支</strong>，把两个账号的证书彻底隔离；</li>
+<li><strong>日常只读</strong>（<code>--readonly</code>），所有会写仓库的操作单独收口到脚本里，不允许随手写。</li>
+</ol>
+<h2 id="签名解析的三条线"><a href="#签名解析的三条线" class="headerlink" title="签名解析的三条线"></a>签名解析的三条线</h2><p>代码签名要在三个环节各解析一次，依据不同：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>依据</th>
+<th>谁提供</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>archive 编译签名</td>
+<td>pbxproj 的 <code>PROVISIONING_PROFILE_SPECIFIER</code>（<strong>名字</strong>，如 <code>umu_cn_ad</code>）</td>
+<td><code>update_project_provisioning</code> 从 <code>mobileprovision/</code> 读出名字写进去</td>
+</tr>
+<tr>
+<td>export 打 ipa</td>
+<td>gym 的 <code>export_options.provisioningProfiles</code>（名字）</td>
+<td>match 写 lane_context，gym 自动填</td>
+</tr>
+<tr>
+<td>本机要有这个文件</td>
+<td>按名字在 profile 目录里匹配</td>
+<td>match 每次打包同步</td>
+</tr>
+</tbody></table>
+<p>几个容易搞错的地方：</p>
+<ul>
+<li><strong>UUID 不起作用</strong>。pbxproj 里的 <code>PROVISIONING_PROFILE = &quot;&lt;UUID&gt;&quot;</code> 是 Xcode 8 之后弃用的 legacy key，已经被忽略。实测同一个 UUID 同时挂在 8 个不同 specifier 下、本机还不存在，打包却一直成功——<strong>名字才是唯一有效的标识</strong>。</li>
+<li><strong>本机同名描述文件常有多份</strong>。加设备会重新生成，旧的不会被删，实测 <code>umu_en_ad</code> 有 4 份（91/96/96/97 台各一）。Xcode 挑哪份没有公开文档，经验上是取最新。match 每次把仓库当前那份装下来使它成为最新，「取最新」才总是对的。<strong>所以 match 不是可选的加速项</strong>。</li>
+<li><strong><code>mobileprovision/</code> 目录必须存在，但不需要跟着设备列表更新</strong>。<code>update_project_provisioning</code> 只从这些文件里取 <code>Name</code>，而加设备只改 UUID 和设备列表、不改 <code>Name</code>。所以那些文件退化成「提供正确名字的占位文件」，内容新旧不影响打包结果。</li>
+</ul>
+<h2 id="打包链路接入"><a href="#打包链路接入" class="headerlink" title="打包链路接入"></a>打包链路接入</h2><p>核心是 <code>Fastfile</code> 里的一个 helper，每个打包 lane 的第一件事就是它：</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">sync_signing_profiles</span>(<span class="params">type</span>)</span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span> <span class="keyword">unless</span> <span class="variable constant_">ENV</span>[<span class="string">&#x27;MATCH_ENABLED&#x27;</span>] == <span class="string">&#x27;true&#x27;</span></span><br><span class="line">  <span class="comment"># 1. 读 .env 里的分支、team、bundle id（主 App + Widget）</span></span><br><span class="line">  <span class="comment"># 2. match(readonly: true) 只读拉取，失败重试 3 次，退避 5s / 10s</span></span><br><span class="line">  <span class="comment"># 3. verify_profile_name 校验装下来的描述文件名与 .env 期望的一致</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+
+<p>设计要点：</p>
+<ul>
+<li><strong>开关</strong>：<code>MATCH_ENABLED</code>，回退时改 <code>false</code> 即可。</li>
+<li><strong>只读</strong>：<code>readonly: true</code>，日常打包绝不新建、吊销证书。含义是「不去 Apple 后台做任何写操作」——仓库里有什么就装什么，找不到就报错，而不是偷偷新建。这正是我们要的。</li>
+<li><strong>主 App + Widget 一次带走</strong>：<code>app_identifier</code> 传数组。</li>
+<li><strong>名字兜底校验</strong>：读 match 写回的环境变量，确认描述文件名字与 <code>.env</code> 里期望的一致，不一致直接报错。这一句专门堵「同步了但装的是旧文件」这种静默失败。</li>
+<li><strong>位置在最前面</strong>：放在 lane 第一条，注释里写明是为了避免白跑 Flutter 构建。</li>
+</ul>
+<p>gym 侧配合：<code>export_xcargs: &quot;-allowProvisioningUpdates&quot;</code>；<code>export_options</code> 在 match 已经写了 lane_context 时就不重复填。</p>
+<h2 id="使用脚本"><a href="#使用脚本" class="headerlink" title="使用脚本"></a>使用脚本</h2><p>三个脚本职责分开，所有写操作只从这几个入口走。</p>
+<h3 id="日常同步-fastlane-match-sync-sh"><a href="#日常同步-fastlane-match-sync-sh" class="headerlink" title="日常同步 fastlane/match_sync.sh"></a>日常同步 <code>fastlane/match_sync.sh</code></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash fastlane/match_sync.sh</span><br></pre></td></tr></table></figure>
+
+<p>流程：</p>
+<ol>
+<li>先 <code>ssh -T git@git.umu.work</code> 校验连通性（输出含 <code>welcome</code> 才算通）；</li>
+<li>处理 gem 镜像源和 bundler 版本（<code>&gt;= 3</code> 或未安装时自动装 2.7.2 并改用 <code>bundle _2.7.2_</code>）；</li>
+<li>对两个账号各遍历 <code>appstore / adhoc / development</code> 三种类型，全 <code>--readonly</code>，合计 6 组。</li>
+</ol>
+<p>跑完描述文件落在 <code>~/Library/MobileDevice/Provisioning Profiles/</code>，证书进钥匙串，之后可打任意区域、任意环境的包。</p>
+<h3 id="添加测试设备-fastlane-match-add-device-sh"><a href="#添加测试设备-fastlane-match-add-device-sh" class="headerlink" title="添加测试设备 fastlane/match_add_device.sh"></a>添加测试设备 <code>fastlane/match_add_device.sh</code></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">bash fastlane/match_add_device.sh          <span class="comment"># 交互式，默认两个账号</span></span><br><span class="line">bash fastlane/match_add_device.sh both|cn|global</span><br></pre></td></tr></table></figure>
+
+<p>设备清单每行一条 <code>UDID 设备名</code>，Ctrl+D 结束；UDID 会校验格式（25 位带横杠 / 40 位十六进制），支持 <code>#</code> 注释。</p>
+<p>执行链路：</p>
+<ol>
+<li><p><strong>预拉取比对</strong>：先拉已注册设备清单，按设备类型统计名额用量；</p>
+</li>
+<li><p><strong>三态处理</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>含义</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NEW</code></td>
+<td>未注册</td>
+<td>注册，占 1 个名额</td>
+</tr>
+<tr>
+<td><code>ENABLED</code></td>
+<td>已注册且启用</td>
+<td>跳过</td>
+</tr>
+<tr>
+<td><code>DISABLED</code></td>
+<td>已注册但被禁用</td>
+<td>自动启用（不占新名额）</td>
+</tr>
+</tbody></table>
+</li>
+<li><p><strong>逐个重建描述文件</strong>：对每个「bundle id × 类型」跑</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">fastlane match &lt;<span class="built_in">type</span>&gt; \</span><br><span class="line">  --git_branch &lt;branch&gt; --team_id &lt;team&gt; \</span><br><span class="line">  --<span class="built_in">readonly</span> <span class="literal">false</span> --force \</span><br><span class="line">  --app_identifier &lt;app_id&gt; \</span><br><span class="line">  --profile_name &lt;项目用名&gt; \</span><br><span class="line">  --api_key_path &lt;key.json&gt;</span><br></pre></td></tr></table></figure></li>
+<li><p><strong>校验目标设备真在 profile 里</strong>（<code>security cms -D</code> + <code>plistlib</code> 读 <code>ProvisionedDevices</code>），不在就报错；</p>
+</li>
+<li><p>同步进 <code>mobileprovision/</code>（留档，漏了不影响打包）→ 跑验证脚本 → 提示 commit。</p>
+</li>
+</ol>
+<p>只动 adhoc + development（appstore 描述文件不含设备）。CN 账号 4 个、国际账号 14 个描述文件。</p>
+<p><strong>为什么加设备是安全的</strong>：<code>--force</code> 只重生成描述文件，证书复用现有的、<strong>不重新打包 p12</strong>，因此不会触发下面 OpenSSL 那个坑。前提是本机已有对应证书私钥，否则 match 可能去新建证书——那是红线。</p>
+<p>脚本是<strong>幂等</strong>的：设备已注册就不重复注册，描述文件已含目标设备就跳过重建。实测拿一台已就位设备重跑，结果是「重建 0 / 跳过 14 / 失败 0」且 git 零 diff。</p>
+<h3 id="验证-fastlane-match-verify-sh"><a href="#验证-fastlane-match-verify-sh" class="headerlink" title="验证 fastlane/match_verify.sh"></a>验证 <code>fastlane/match_verify.sh</code></h3><p>这个是安全带，也是我认为整套里最值得讲的设计。</p>
+<p>match 在私钥没真正装进钥匙串的时候，<strong>照样打印成功</strong>。本机因为本来就有私钥，完全察觉不到，只有干净的机器或 CI 才爆发。所以这个脚本的做法是：<strong>造一个全新的临时钥匙串</strong>（<code>/tmp/match_verify_$$.keychain</code>），在里面跑一次真实的 <code>match --readonly</code>，模拟「另一台机器」的处境——</p>
+<ul>
+<li>检测输出里是否出现 <code>MAC verification failed</code>；</li>
+<li>数临时钥匙串里可签名的身份数量，<strong>≥ 2 且无 MAC 错</strong>才打印 <code>✅✅✅ 验证通过</code>；</li>
+<li><code>trap cleanup EXIT</code> 保证退出时删掉临时钥匙串。</li>
+</ul>
+<p>只读、不改仓库、无副作用。<strong>铁律：任何写证书的操作后必跑它，只信 <code>✅✅✅</code>，别信 <code>installed 🙌</code>。</strong></p>
+<h2 id="踩过的坑"><a href="#踩过的坑" class="headerlink" title="踩过的坑"></a>踩过的坑</h2><h3 id="一、OpenSSL-3-x-导致私钥装不进钥匙串"><a href="#一、OpenSSL-3-x-导致私钥装不进钥匙串" class="headerlink" title="一、OpenSSL 3.x 导致私钥装不进钥匙串"></a>一、OpenSSL 3.x 导致私钥装不进钥匙串</h3><p>最隐蔽的一个。</p>
+<ul>
+<li><p><strong>现象</strong>：别的机器 / CI 同步后证书没有私钥，无法签名；但 match 依然打印 <code>installed 🙌</code>，<code>security: MAC verification failed during PKCS12 import</code> 被淹没在输出里。本机察觉不到，只有干净机器 / CI 打包才爆发。</p>
+</li>
+<li><p><strong>根因</strong>：OpenSSL 3.0 起打包 p12 默认用现代算法（AES / PBKDF2 / SHA256），旧版 macOS 的 <code>security</code> 框架不认，私钥装不进去。而 match 自带的导入命令内部就是用 OpenSSL 打包 p12。</p>
+</li>
+<li><p><strong>解法</strong>：用 <strong>legacy 格式</strong>的 p12。macOS 钥匙串访问右键导出的天然就是 legacy 格式。纯 CI 无图形界面时用 openssl 强制：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openssl pkcs12 -<span class="built_in">export</span> -legacy \</span><br><span class="line">  -certpbe pbeWithSHA1And40BitRC2-CBC \</span><br><span class="line">  -keypbe pbeWithSHA1And3-KeyTripleDES-CBC \</span><br><span class="line">  -macalg sha1 -<span class="keyword">in</span> cert_and_key.pem -out out.p12 -passout pass:</span><br></pre></td></tr></table></figure></li>
+<li><p><strong>关键约束</strong>：<strong>入库绝不能用 match 自带的导入命令</strong>，因为它会用 openssl 重新打包，又把格式改坏。正确做法是「解密仓库 → 直接替换 p12 → 重新加密 → push」。</p>
+</li>
+</ul>
+<h3 id="二、必须-force-profile-name"><a href="#二、必须-force-profile-name" class="headerlink" title="二、必须 --force + --profile_name"></a>二、必须 <code>--force</code> + <code>--profile_name</code></h3><p>两个参数缺一不可：</p>
+<ol>
+<li><strong>不给 <code>--profile_name</code></strong> → match 用自己的默认命名（<code>match AdHoc com.UMU.UMU-TW</code>）建一个<strong>平行 profile</strong>，而工程按 <code>umu_tw_ad</code> 找——产出根本用不上，Portal 上还多一条垃圾。</li>
+<li><strong>用 <code>--force_for_new_devices</code></strong> → 它判定设备已齐时直接复用旧 profile，此时 <code>--profile_name</code> <strong>根本不生效</strong>（只在真正创建 profile 时才读取）。必须用 <code>--force</code>。</li>
+<li>好消息：用同名 <code>--profile_name</code> 重建时，match 会自动删掉 Portal 上旧的同名 profile，不产生重名，无需手动预删。</li>
+</ol>
+<h3 id="三、设备状态与描述文件不同步"><a href="#三、设备状态与描述文件不同步" class="headerlink" title="三、设备状态与描述文件不同步"></a>三、设备状态与描述文件不同步</h3><p>被<strong>禁用</strong>的设备不会被包含进描述文件。实测 CN 账号总设备 87、禁用 8，而 <code>umu_cn_ad</code> 里正好 <strong>79</strong> 个——差额精确等于禁用数。</p>
+<p>而重复注册对已存在的 UDID 是<strong>幂等忽略</strong>的：既不报错，<strong>也不会启用它</strong>。所以不识别这个状态，就会出现「注册成功 → 描述文件重建成功 → 设备还是装不上」。</p>
+<p>两道防护：注册前先 classify，检测到 <code>DISABLED</code> 就调 ASC API 启用；重建后校验目标设备真的在里面。</p>
+<blockquote>
+<p>写 <code>Device.enable</code> 时注意：它收的是 <strong>UDID 不是 id</strong>。传错时 <code>find_by_udid</code> 返回 nil <strong>且不抛异常</strong>，必须校验返回值，否则又是一个静默失败。</p>
+</blockquote>
+<h3 id="四、fastlane-版本"><a href="#四、fastlane-版本" class="headerlink" title="四、fastlane 版本"></a>四、fastlane 版本</h3><p>旧版（2.225.0）在苹果改了接口之后<strong>建不了描述文件</strong>，报 <code>&#39;templateName&#39; is not an attribute on the resource &#39;profiles&#39;</code>。根因是苹果 ASC API 移除了 <code>profiles</code> 资源的 <code>templateName</code> 属性，而旧版 spaceship 仍在 POST 里发它。</p>
+<p><strong>但只读同步不受影响</strong>——所以这个坑平时完全藏着，只有加设备时才炸。Gemfile 里钉死 <strong>2.237.0</strong>。</p>
+<h3 id="附：描述文件的过期规律（实测归纳，非苹果官方规则）"><a href="#附：描述文件的过期规律（实测归纳，非苹果官方规则）" class="headerlink" title="附：描述文件的过期规律（实测归纳，非苹果官方规则）"></a>附：描述文件的过期规律（实测归纳，非苹果官方规则）</h3><p>重建描述文件<strong>不会延长有效期</strong>。基于本项目 32 个 profile 的实测：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">分发类（adhoc / appstore）  过期日 = min(创建日+1年, 证书到期日)   → 锚定证书</span><br><span class="line">开发类（development）        过期日 = 创建日 + 1 年                → 不看证书</span><br></pre></td></tr></table></figure>
+
+<p>样本命中率：adhoc 10/10，development 10/10。所以同一天同一命令生成的 <code>umu_tw_ad</code> 是 357 天（被证书截断）、<code>umu_tw_dev</code> 是 365 天。<strong>真正的死线始终是证书到期日。</strong></p>
+<blockquote>
+<p>这是观察到的行为，苹果官方文档对此只字未提。</p>
+</blockquote>
+<h2 id="安全边界"><a href="#安全边界" class="headerlink" title="安全边界"></a>安全边界</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">✅ 随便用：  match ... --readonly（同步，日常）</span><br><span class="line">⚠️ 想清楚：  --readonly false（写仓库）/ --force（重生成描述文件）</span><br><span class="line">⚠️ 必配对：  --force 时必须同时给 --profile_name</span><br><span class="line">🔴 别碰：    --force_for_new_certificates（换证书，会连锁失效 + OpenSSL 坏格式）</span><br><span class="line">🔴 别碰：    match import（OpenSSL 重打包毁 p12 格式）</span><br><span class="line">🔴🔴 绝不：  match nuke（删光 Team 证书）</span><br></pre></td></tr></table></figure>
+
+<p><strong>续期</strong>只做到半自动：Portal 上的建 / 吊证书<strong>必须人工</strong>（证书每个 Team 上限 3 个，误吊销会连锁失效），其余步骤可以脚本化。</p>
+<p>续期后还要查打包机的 partition list——这是唯一会用到 <code>MATCH_KEYCHAIN_PASSWORD</code> 的时机。有图形界面会弹「codesign 想要使用钥匙串机密信息」卡到超时；无图形界面直接报 <code>errSecInternalComponent</code>。而这个失败<strong>只警告不中断</strong>，故障会推迟到很后面的 codesign 才爆发，很容易往证书过期、profile 不匹配上查很久。所以续期后在打包机上跑一次试签确认：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="built_in">test</span> &gt; /tmp/cs_probe</span><br><span class="line">codesign -s <span class="string">&quot;Apple Distribution: ...&quot;</span> /tmp/cs_probe \</span><br><span class="line">  &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;✅ 免密签名正常&quot;</span> || <span class="built_in">echo</span> <span class="string">&quot;❌ partition list 有问题&quot;</span></span><br><span class="line"><span class="built_in">rm</span> -f /tmp/cs_probe</span><br></pre></td></tr></table></figure>
+
+<h2 id="尚未解决"><a href="#尚未解决" class="headerlink" title="尚未解决"></a>尚未解决</h2><ul>
+<li><strong><code>mobileprovision/</code> 依赖</strong>。打包已经走 match，但 <code>update_project_provisioning</code> 仍然需要那个目录里的文件，只为取一个 <code>Name</code> 字符串。fastlane 有现役 action 可以直接传名字，计划先让 match 在打包机跑稳一段时间，再换 action、删目录。顺带还能消掉一个隐藏依赖：<code>update_project_provisioning</code> 会往 <code>/tmp</code> 下载 Apple 根证书用于验签，而 <code>/tmp</code> 会被系统清理——这是条公网依赖。</li>
+<li><strong>CN 真机调试的隐患</strong>。<code>umu_cn_dev</code> / <code>umu_cn_dev_widget</code> 里内嵌两张开发证书，其中一张已过期；另两张新的有效证书因为 profile 生成时间更早而没被包含进去。目前有一张有效证书兜底，但换台没有对应私钥的机器，真机调试就会失败。</li>
+<li><strong>设备名额是硬约束</strong>。每个设备类型（iPhone / iPad / iPod）每年各 100 个，删除 / 禁用<strong>不释放名额</strong>，只能等年度重置。格式合法但不存在的 UDID 苹果照样接受，白占名额。</li>
+</ul>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>签名这类「错了很难查、平时又不常动」的环节，重点不在于自动化得多彻底，而在于：</p>
+<ul>
+<li>把状态收敛到一个<strong>可验证的单一来源</strong>；</li>
+<li>给每个危险动作<strong>配上护栏</strong>（只读默认、写操作收口、验证脚本强制跑）。</li>
+</ul>
+<p>最值得花心思的往往不是主流程，而是<strong>怎么让失败能被看见</strong>——因为这类问题的代价恰恰在于它不报错。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/iOS%E3%80%81fastlane%E3%80%81%E8%AF%81%E4%B9%A6%E3%80%81CI/" rel="tag"># iOS、fastlane、证书、CI</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/26/iOS-%E5%B7%A5%E7%A8%8B%E6%94%AF%E6%8C%81-arm64-%E6%A8%A1%E6%8B%9F%E5%99%A8%E7%9A%84%E5%AE%9E%E7%8E%B0/" rel="prev" title="iOS 工程支持 arm64 模拟器的实现">
+      <i class="fa fa-chevron-left"></i> iOS 工程支持 arm64 模拟器的实现
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/10/26/iOS-%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6%E7%9A%84%E8%87%AA%E5%8A%A8%E5%8C%96%E5%90%8C%E6%AD%A5-fastlane-match/" rel="next" title="iOS 签名证书的自动化同步（fastlane match）">
+      iOS 签名证书的自动化同步（fastlane match） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">整体模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AD%BE%E5%90%8D%E8%A7%A3%E6%9E%90%E7%9A%84%E4%B8%89%E6%9D%A1%E7%BA%BF"><span class="nav-number">3.</span> <span class="nav-text">签名解析的三条线</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%93%E5%8C%85%E9%93%BE%E8%B7%AF%E6%8E%A5%E5%85%A5"><span class="nav-number">4.</span> <span class="nav-text">打包链路接入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E8%84%9A%E6%9C%AC"><span class="nav-number">5.</span> <span class="nav-text">使用脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%B8%B8%E5%90%8C%E6%AD%A5-fastlane-match-sync-sh"><span class="nav-number">5.1.</span> <span class="nav-text">日常同步 fastlane&#x2F;match_sync.sh</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0%E6%B5%8B%E8%AF%95%E8%AE%BE%E5%A4%87-fastlane-match-add-device-sh"><span class="nav-number">5.2.</span> <span class="nav-text">添加测试设备 fastlane&#x2F;match_add_device.sh</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81-fastlane-match-verify-sh"><span class="nav-number">5.3.</span> <span class="nav-text">验证 fastlane&#x2F;match_verify.sh</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">6.</span> <span class="nav-text">踩过的坑</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E3%80%81OpenSSL-3-x-%E5%AF%BC%E8%87%B4%E7%A7%81%E9%92%A5%E8%A3%85%E4%B8%8D%E8%BF%9B%E9%92%A5%E5%8C%99%E4%B8%B2"><span class="nav-number">6.1.</span> <span class="nav-text">一、OpenSSL 3.x 导致私钥装不进钥匙串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%BF%85%E9%A1%BB-force-profile-name"><span class="nav-number">6.2.</span> <span class="nav-text">二、必须 --force + --profile_name</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E8%AE%BE%E5%A4%87%E7%8A%B6%E6%80%81%E4%B8%8E%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E4%B8%8D%E5%90%8C%E6%AD%A5"><span class="nav-number">6.3.</span> <span class="nav-text">三、设备状态与描述文件不同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9B%E3%80%81fastlane-%E7%89%88%E6%9C%AC"><span class="nav-number">6.4.</span> <span class="nav-text">四、fastlane 版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%99%84%EF%BC%9A%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E7%9A%84%E8%BF%87%E6%9C%9F%E8%A7%84%E5%BE%8B%EF%BC%88%E5%AE%9E%E6%B5%8B%E5%BD%92%E7%BA%B3%EF%BC%8C%E9%9D%9E%E8%8B%B9%E6%9E%9C%E5%AE%98%E6%96%B9%E8%A7%84%E5%88%99%EF%BC%89"><span class="nav-number">6.5.</span> <span class="nav-text">附：描述文件的过期规律（实测归纳，非苹果官方规则）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E8%BE%B9%E7%95%8C"><span class="nav-number">7.</span> <span class="nav-text">安全边界</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%9A%E6%9C%AA%E8%A7%A3%E5%86%B3"><span class="nav-number">8.</span> <span class="nav-text">尚未解决</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">小结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
