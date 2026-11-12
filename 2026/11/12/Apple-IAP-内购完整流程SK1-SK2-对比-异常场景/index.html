@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Apple IAP 内购完整流程（SK1 &#x2F; SK2 对比 + 异常场景） 本文梳理 Apple 内购的完整闭环：App Store Connect 后台配置、客户端与服务端流程、StoreKit 1 与 StoreKit 2 的核心差异，以及常见异常与漏单场景的处理方式。读者对象：iOS &#x2F; Flutter 移动端开发与后端开发，希望理解苹果内购闭环与漏单根源。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Apple IAP 内购完整流程（SK1 &#x2F; SK2 对比 + 异常场景）">
+<meta property="og:url" content="https://lijifeng168.com/2026/11/12/Apple-IAP-%E5%86%85%E8%B4%AD%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8BSK1-SK2-%E5%AF%B9%E6%AF%94-%E5%BC%82%E5%B8%B8%E5%9C%BA%E6%99%AF/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="Apple IAP 内购完整流程（SK1 &#x2F; SK2 对比 + 异常场景） 本文梳理 Apple 内购的完整闭环：App Store Connect 后台配置、客户端与服务端流程、StoreKit 1 与 StoreKit 2 的核心差异，以及常见异常与漏单场景的处理方式。读者对象：iOS &#x2F; Flutter 移动端开发与后端开发，希望理解苹果内购闭环与漏单根源。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-11-12T03:42:39.000Z">
+<meta property="article:modified_time" content="2026-11-12T03:42:39.647Z">
+<meta property="article:author" content="lijifeng">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/11/12/Apple-IAP-%E5%86%85%E8%B4%AD%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8BSK1-SK2-%E5%AF%B9%E6%AF%94-%E5%BC%82%E5%B8%B8%E5%9C%BA%E6%99%AF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Apple IAP 内购完整流程（SK1 / SK2 对比 + 异常场景） | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/11/12/Apple-IAP-%E5%86%85%E8%B4%AD%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8BSK1-SK2-%E5%AF%B9%E6%AF%94-%E5%BC%82%E5%B8%B8%E5%9C%BA%E6%99%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Apple IAP 内购完整流程（SK1 / SK2 对比 + 异常场景）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-11-12 11:42:39" itemprop="dateCreated datePublished" datetime="2026-11-12T11:42:39+08:00">2026-11-12</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Apple-IAP-内购完整流程（SK1-SK2-对比-异常场景）"><a href="#Apple-IAP-内购完整流程（SK1-SK2-对比-异常场景）" class="headerlink" title="Apple IAP 内购完整流程（SK1 / SK2 对比 + 异常场景）"></a>Apple IAP 内购完整流程（SK1 / SK2 对比 + 异常场景）</h1><blockquote>
+<p>本文梳理 Apple 内购的完整闭环：App Store Connect 后台配置、客户端与服务端流程、StoreKit 1 与 StoreKit 2 的核心差异，以及常见异常与漏单场景的处理方式。<br>读者对象：iOS / Flutter 移动端开发与后端开发，希望理解苹果内购闭环与漏单根源。</p>
+</blockquote>
+<span id="more"></span>
+
+
+<h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ol>
+<li>前置说明</li>
+<li>App Store Connect 后台配置步骤</li>
+<li>整体支付链路总览</li>
+<li>SK1（StoreKit 1）完整流程</li>
+<li>SK2（StoreKit 2）完整流程</li>
+<li>SK1 与 SK2 核心差异（重点：漏单那一块）</li>
+<li>服务端统一职责与验签逻辑</li>
+<li>强制业务规则</li>
+<li>常见异常场景 + 处理方案</li>
+<li>小结</li>
+</ol>
+<hr>
+<h2 id="1-前置说明"><a href="#1-前置说明" class="headerlink" title="1. 前置说明"></a>1. 前置说明</h2><p>苹果内购分 3 种商品类型，创建商品时选定，一旦创建不能改类型：</p>
+<ul>
+<li><strong>消耗型 Consumable</strong>：买一次用一次（金币、次数、道具），用完可以重复购买</li>
+<li><strong>非消耗型 Non-consumable</strong>：一次购买永久拥有（解锁功能、去广告），不能重复买</li>
+<li><strong>自动续期订阅 Auto-renewable Subscription</strong>：按月 / 按年自动续费，有过期、退款、恢复订阅逻辑</li>
+</ul>
+<blockquote>
+<p>核心原则：<strong>苹果只负责扣款和订单签名；权益发放、订单幂等、防漏单全部由我们自己业务侧保证</strong>。</p>
+</blockquote>
+<hr>
+<h2 id="2-App-Store-Connect-后台配置"><a href="#2-App-Store-Connect-后台配置" class="headerlink" title="2. App Store Connect 后台配置"></a>2. App Store Connect 后台配置</h2><ol>
+<li>进入 App Store Connect → 找到你的 App → <strong>In-App Purchases</strong></li>
+<li>点「+」新建内购商品</li>
+<li>填写：<ul>
+<li>Product ID：<strong>全局唯一</strong>，一个商品一个 ID，客户端、服务端都靠它区分商品</li>
+<li>商品类型：消耗 / 非消耗 / 自动续期订阅</li>
+<li>价格档位（选择苹果定价表）</li>
+<li>本地化名称、描述（App Store 展示给用户看）</li>
+</ul>
+</li>
+<li>提交审核前需要：上传审核截图、设置审核账号（沙盒测试账号）</li>
+<li>【SK2 可选增强】开启 <strong>App Store Server Notifications V2</strong><ul>
+<li>填写你的服务端 HTTPS 回调地址</li>
+<li>苹果订单状态变更（扣款、退款、订阅过期）会主动 POST 通知你的服务端</li>
+<li>仅做辅助，<strong>不能替代客户端上报主链路</strong></li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>注意：Product ID 一旦创建，删除后不能复用。</p>
+</blockquote>
+<hr>
+<h2 id="3-整体支付链路总览（SK1-SK2-通用骨架）"><a href="#3-整体支付链路总览（SK1-SK2-通用骨架）" class="headerlink" title="3. 整体支付链路总览（SK1 / SK2 通用骨架）"></a>3. 整体支付链路总览（SK1 / SK2 通用骨架）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">用户点击购买按钮</span><br><span class="line">    ↓</span><br><span class="line">客户端向苹果SDK请求商品信息（价格、名称）</span><br><span class="line">    ↓</span><br><span class="line">拉起苹果支付弹窗，用户输入Apple ID密码/面容确认支付</span><br><span class="line">    ↓</span><br><span class="line">苹果扣款成功 → 苹果生成订单（receipt / JWS）</span><br><span class="line">    ↓</span><br><span class="line">SDK回调交易对象，拿到凭证（receipt 或者 SK2 JWS）</span><br><span class="line">    ↓</span><br><span class="line">【客户端】把凭证传给后端</span><br><span class="line">    ↓</span><br><span class="line">【服务端】向苹果服务器验签，校验订单真实性</span><br><span class="line">    ↓</span><br><span class="line">验签通过 → 服务端幂等判断，给用户发放权益，落库</span><br><span class="line">    ↓</span><br><span class="line">服务端返回成功给客户端</span><br><span class="line">    ↓</span><br><span class="line">客户端调用 finishTransaction / transaction.finish() 标记这笔交易完结</span><br><span class="line">    ↓</span><br><span class="line">苹果SDK清除这笔待处理交易</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>红线：<strong>必须等后端返回权益发放成功，才调用 finish！</strong><br>提前 finish = 苹果认为这笔交易结束，后续 SDK 不会再给你推这笔订单，极易漏单。</p>
+</blockquote>
+<hr>
+<h2 id="4-SK1（StoreKit-1）完整流程"><a href="#4-SK1（StoreKit-1）完整流程" class="headerlink" title="4. SK1（StoreKit 1）完整流程"></a>4. SK1（StoreKit 1）完整流程</h2><h3 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h3><ol>
+<li>启动时添加 <code>SKPaymentQueue.default().add(observer)</code> 支付队列观察者（全局常驻）</li>
+<li>拉取商品：<code>SKProductsRequest</code> 传入 productId 数组，拿到 <code>SKProduct</code>，渲染购买页</li>
+<li>用户点击购买：构造 <code>SKPayment</code>，加入支付队列 <code>SKPaymentQueue.default().add(payment)</code></li>
+<li>支付成功，观察者回调拿到 <code>SKTransaction</code></li>
+<li>从 app 沙盒读取 receipt 凭证（<code>Bundle.main.appStoreReceiptURL</code>），把 receipt 传给后端</li>
+<li>等待后端返回成功 → 调用 <code>SKPaymentQueue.default().finishTransaction(transaction)</code></li>
+<li>失败 / 网络异常：<strong>不 finish</strong>，这笔交易留在本地沙盒<ul>
+<li>下次 App 启动，观察者会再次收到这笔未 finish 的交易</li>
+<li>⚠️ 致命短板：交易 “待办标记” 存在 App 沙盒；<strong>卸载 App 重装，沙盒清空，本地再也收不到这笔交易</strong></li>
+</ul>
+</li>
+</ol>
+<h3 id="SK1-凭证"><a href="#SK1-凭证" class="headerlink" title="SK1 凭证"></a>SK1 凭证</h3><ul>
+<li>凭证是 receipt（base64 字符串）</li>
+<li>后端拿到 receipt，调用苹果验签接口，返回订单明细</li>
+</ul>
+<hr>
+<h2 id="5-SK2（StoreKit-2）完整流程（Swift-Concurrency-async-await）"><a href="#5-SK2（StoreKit-2）完整流程（Swift-Concurrency-async-await）" class="headerlink" title="5. SK2（StoreKit 2）完整流程（Swift Concurrency async/await）"></a>5. SK2（StoreKit 2）完整流程（Swift Concurrency async/await）</h2><p>SK2 是 Swift 原生并发 API，不再依赖 delegate 观察者。</p>
+<h3 id="客户端-1"><a href="#客户端-1" class="headerlink" title="客户端"></a>客户端</h3><ol>
+<li>全局监听交易流：<code>for await transaction in Transaction.updates</code>，App 启动就开启监听</li>
+<li>【兜底】启动时主动拉 <code>Transaction.all</code>：从苹果服务端拉取该 Apple ID 下所有<strong>未 finish 的交易</strong><blockquote>
+<p>重点：这个是从苹果服务器拉，不是本地沙盒</p>
+</blockquote>
+</li>
+<li>用户购买：<code>try await product.purchase()</code>，返回 <code>PurchaseResult</code></li>
+<li>拿到成功的 <code>Transaction</code>，取出 <code>jwsRepresentation</code>（JWS 字符串）传给后端</li>
+<li>等待后端返回成功 → <code>await transaction.finish()</code></li>
+<li>网络异常、后端报错：<strong>不 finish</strong><blockquote>
+<p>这笔交易保存在苹果服务端；卸载重装、换同 Apple ID 设备，下次启动 <code>Transaction.all</code> 依然能拿到</p>
+</blockquote>
+</li>
+</ol>
+<h3 id="SK2-凭证"><a href="#SK2-凭证" class="headerlink" title="SK2 凭证"></a>SK2 凭证</h3><ul>
+<li>凭证是 JWS（JSON Web Signature），自带苹果签名，后端可以直接验签，也可以调用苹果接口校验</li>
+</ul>
+<blockquote>
+<p>代码示意（极简版）</p>
+</blockquote>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> StoreKit</span><br><span class="line"></span><br><span class="line"><span class="type">Task</span> &#123;</span><br><span class="line">    <span class="comment">// 全局监听新交易</span></span><br><span class="line">    <span class="keyword">for</span> <span class="keyword">await</span> transaction <span class="keyword">in</span> <span class="type">Transaction</span>.updates &#123;</span><br><span class="line">        <span class="keyword">let</span> jws <span class="operator">=</span> transaction.jwsRepresentation</span><br><span class="line">        <span class="keyword">let</span> backendSuccess <span class="operator">=</span> <span class="keyword">await</span> uploadJwsToServer(jws: jws)</span><br><span class="line">        <span class="keyword">if</span> backendSuccess &#123;</span><br><span class="line">            <span class="keyword">await</span> transaction.finish()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 启动兜底：拉苹果服务端所有未完结交易</span></span><br><span class="line"><span class="keyword">func</span> <span class="title function_">loadUnfinishedTransactions</span>() <span class="keyword">async</span> &#123;</span><br><span class="line">    <span class="keyword">for</span> <span class="keyword">await</span> transaction <span class="keyword">in</span> <span class="type">Transaction</span>.all &#123;</span><br><span class="line">        <span class="keyword">let</span> jws <span class="operator">=</span> transaction.jwsRepresentation</span><br><span class="line">        <span class="keyword">let</span> backendSuccess <span class="operator">=</span> <span class="keyword">await</span> uploadJwsToServer(jws: jws)</span><br><span class="line">        <span class="keyword">if</span> backendSuccess &#123;</span><br><span class="line">            <span class="keyword">await</span> transaction.finish()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="6-SK1-与-SK2-核心差异"><a href="#6-SK1-与-SK2-核心差异" class="headerlink" title="6. SK1 与 SK2 核心差异"></a>6. SK1 与 SK2 核心差异</h2><table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>SK1 StoreKit1</th>
+<th>SK2 StoreKit2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>存储「待办交易标记」</td>
+<td>App 本地沙盒</td>
+<td>苹果服务端</td>
+</tr>
+<tr>
+<td>卸载 App 重装</td>
+<td>沙盒清空，本地拿不到这笔待办交易</td>
+<td>可以通过 <code>Transaction.all</code> 从苹果服务器拉回</td>
+</tr>
+<tr>
+<td>凭证</td>
+<td>receipt（base64）</td>
+<td>JWS</td>
+</tr>
+<tr>
+<td>回调模式</td>
+<td>Delegate 观察者模式</td>
+<td>async/await 异步流</td>
+</tr>
+<tr>
+<td>天然兜底能力</td>
+<td>弱，依赖本地沙盒</td>
+<td>强，苹果服务器统一记录交易</td>
+</tr>
+<tr>
+<td>门槛</td>
+<td>兼容 iOS 9+</td>
+<td>最低 iOS 15+</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>最关键一句话：<br><strong>SK1：订单记录在苹果服务器，但 “通知 App 还有这笔单没处理” 的标记放在本地沙盒。沙盒丢了，App 就不知道这笔单存在。</strong><br><strong>SK2：订单 + 待办状态全部在苹果服务器，App 启动主动去服务器拉待办。</strong></p>
+</blockquote>
+<blockquote>
+<p>极端漏单场景：SK1，支付成功、凭证还没传给后端，用户直接卸载 App。</p>
+<ul>
+<li>本地沙盒没了 → App 下次重装不会再回调这笔订单</li>
+<li>后端从来没有收到 receipt，没有记录 originalTransactionId</li>
+<li>此时：<strong>后端没有任何线索，无法主动去苹果查询这笔订单 → 直接丢单</strong></li>
+<li>SK2 不会出现这个场景：重装后 Transaction.all 可以拉到这笔未 finish 订单</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="7-服务端统一职责与验签逻辑"><a href="#7-服务端统一职责与验签逻辑" class="headerlink" title="7. 服务端统一职责与验签逻辑"></a>7. 服务端统一职责与验签逻辑</h2><p>不管 SK1 还是 SK2，后端逻辑大体一致：</p>
+<ol>
+<li>接收客户端上传的 receipt / JWS</li>
+<li>调用苹果官方验签接口（生产 / 沙盒地址分开）</li>
+<li>验签成功，解析出：<code>originalTransactionId</code>、productId、购买时间、商品类型</li>
+<li><strong>幂等校验：以 originalTransactionId 作为唯一主键</strong><ul>
+<li>如果这个 id 已经发过权益 → 直接返回成功，不再重复发</li>
+</ul>
+</li>
+<li>根据商品类型发放权益：<ul>
+<li>消耗品：增加次数 / 道具</li>
+<li>非消耗品：永久解锁权限</li>
+<li>订阅：计算有效期，写入订阅到期时间</li>
+</ul>
+</li>
+<li>落库，记录订单、用户 id、originalTransactionId、状态</li>
+<li>返回成功给客户端，客户端才可以 finish</li>
+</ol>
+<blockquote>
+<p>补充：App Store Server Notification（V2 通知）<br>苹果主动推送通知给后端：退款、订阅过期、订阅取消等。<br>作用：<strong>逆向回收权益</strong>，不能用来替代客户端上报主链路。<br>原因：通知有可能延迟、丢、重试，不能作为发放权益依据。</p>
+</blockquote>
+<hr>
+<h2 id="8-强制业务规则"><a href="#8-强制业务规则" class="headerlink" title="8. 强制业务规则"></a>8. 强制业务规则</h2><ol>
+<li>✅ 后端返回成功，才调用 finish</li>
+<li>✅ 幂等键必须用 <code>originalTransactionId</code>，不能用客户端随便生成的 id</li>
+<li>✅ 沙盒环境和生产环境验签地址分开，上线不要混用沙盒地址</li>
+<li>✅ 不能信任客户端传上来的价格、商品名称，一切以苹果验签返回的数据为准</li>
+<li>❌ 绝对不要客户端自己判断支付成功就给用户权益</li>
+<li>❌ 不要提前 finish，这是 SK1 最常见漏单根源</li>
+<li>❌ Server Notification 只做退款 / 过期回收，不做主链路发权益</li>
+</ol>
+<hr>
+<h2 id="9-常见异常场景-amp-处理方案"><a href="#9-常见异常场景-amp-处理方案" class="headerlink" title="9. 常见异常场景 &amp; 处理方案"></a>9. 常见异常场景 &amp; 处理方案</h2><ol>
+<li><strong>支付成功，上传凭证时网络断了</strong><ul>
+<li>客户端：不 finish；SK1 下次启动靠观察者回调；SK2 下次启动靠 Transaction.all</li>
+<li>优先依赖苹果原生兜底；如需更高可靠性，可自行持久化未完结交易</li>
+</ul>
+</li>
+<li><strong>后端服务宕机，上传失败</strong><ul>
+<li>客户端不 finish；等用户下次打开 App，SDK 自动重新抛出这笔交易，再次上报</li>
+</ul>
+</li>
+<li><strong>用户多设备登录同一个 Apple ID 下单</strong><ul>
+<li>后端靠 originalTransactionId 幂等，不会重复发权益</li>
+</ul>
+</li>
+<li><strong>用户申请退款</strong><ul>
+<li>依靠苹果 Server Notification V2 收到退款事件，后端收回权益</li>
+</ul>
+</li>
+<li><strong>SK1 用户卸载重装，并且之前没有上传过 receipt</strong><ul>
+<li>无解，属于 SK1 原生短板；想规避这个风险，新项目直接上 SK2</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="10-小结"><a href="#10-小结" class="headerlink" title="10. 小结"></a>10. 小结</h2><ul>
+<li>SK1 老方案：兼容性好，但是<strong>沙盒依赖带来天然漏单风险</strong>，适合老项目维护</li>
+<li>SK2 新方案：基于苹果服务端交易记录，兜底强，async/await 写法干净，新项目优先选（iOS15+）</li>
+<li>整个内购闭环核心：<strong>苹果负责扣款和签名，我们负责验签、幂等、权益、不提前 finish</strong></li>
+<li>Server Notification 是附加能力，用来处理退款、订阅状态变更，不能做主链路</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/29/iOS-%E7%BB%84%E4%BB%B6%E5%8C%96%E8%B7%AF%E7%94%B1%E5%AE%9E%E6%88%98%E4%BB%8E-CTMediator-%E5%88%B0%E9%9D%99%E6%80%81%E5%8A%A8%E6%80%81%E5%BA%93%E5%BA%95%E5%B1%82/" rel="prev" title="iOS 组件化路由实战：从 CTMediator 到静态/动态库底层">
+      <i class="fa fa-chevron-left"></i> iOS 组件化路由实战：从 CTMediator 到静态/动态库底层
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Apple-IAP-%E5%86%85%E8%B4%AD%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B%EF%BC%88SK1-SK2-%E5%AF%B9%E6%AF%94-%E5%BC%82%E5%B8%B8%E5%9C%BA%E6%99%AF%EF%BC%89"><span class="nav-number">1.</span> <span class="nav-text">Apple IAP 内购完整流程（SK1 &#x2F; SK2 对比 + 异常场景）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95"><span class="nav-number">1.1.</span> <span class="nav-text">目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%89%8D%E7%BD%AE%E8%AF%B4%E6%98%8E"><span class="nav-number">1.2.</span> <span class="nav-text">1. 前置说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-App-Store-Connect-%E5%90%8E%E5%8F%B0%E9%85%8D%E7%BD%AE"><span class="nav-number">1.3.</span> <span class="nav-text">2. App Store Connect 后台配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%95%B4%E4%BD%93%E6%94%AF%E4%BB%98%E9%93%BE%E8%B7%AF%E6%80%BB%E8%A7%88%EF%BC%88SK1-SK2-%E9%80%9A%E7%94%A8%E9%AA%A8%E6%9E%B6%EF%BC%89"><span class="nav-number">1.4.</span> <span class="nav-text">3. 整体支付链路总览（SK1 &#x2F; SK2 通用骨架）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-SK1%EF%BC%88StoreKit-1%EF%BC%89%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B"><span class="nav-number">1.5.</span> <span class="nav-text">4. SK1（StoreKit 1）完整流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">1.5.1.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SK1-%E5%87%AD%E8%AF%81"><span class="nav-number">1.5.2.</span> <span class="nav-text">SK1 凭证</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-SK2%EF%BC%88StoreKit-2%EF%BC%89%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B%EF%BC%88Swift-Concurrency-async-await%EF%BC%89"><span class="nav-number">1.6.</span> <span class="nav-text">5. SK2（StoreKit 2）完整流程（Swift Concurrency async&#x2F;await）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF-1"><span class="nav-number">1.6.1.</span> <span class="nav-text">客户端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SK2-%E5%87%AD%E8%AF%81"><span class="nav-number">1.6.2.</span> <span class="nav-text">SK2 凭证</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-SK1-%E4%B8%8E-SK2-%E6%A0%B8%E5%BF%83%E5%B7%AE%E5%BC%82"><span class="nav-number">1.7.</span> <span class="nav-text">6. SK1 与 SK2 核心差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E6%9C%8D%E5%8A%A1%E7%AB%AF%E7%BB%9F%E4%B8%80%E8%81%8C%E8%B4%A3%E4%B8%8E%E9%AA%8C%E7%AD%BE%E9%80%BB%E8%BE%91"><span class="nav-number">1.8.</span> <span class="nav-text">7. 服务端统一职责与验签逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%BC%BA%E5%88%B6%E4%B8%9A%E5%8A%A1%E8%A7%84%E5%88%99"><span class="nav-number">1.9.</span> <span class="nav-text">8. 强制业务规则</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E5%B8%B8%E8%A7%81%E5%BC%82%E5%B8%B8%E5%9C%BA%E6%99%AF-amp-%E5%A4%84%E7%90%86%E6%96%B9%E6%A1%88"><span class="nav-number">1.10.</span> <span class="nav-text">9. 常见异常场景 &amp; 处理方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E5%B0%8F%E7%BB%93"><span class="nav-number">1.11.</span> <span class="nav-text">10. 小结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">25</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
