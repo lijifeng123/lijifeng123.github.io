@@ -153,6 +153,72 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/11/13/Flutter-%E4%B8%89%E6%A3%B5%E6%A0%91%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%9B%B4%E6%96%B0%E6%9C%BA%E5%88%B6%E6%B7%B1%E5%BA%A6%E6%A2%B3%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2026/11/13/Flutter-%E4%B8%89%E6%A3%B5%E6%A0%91%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%9B%B4%E6%96%B0%E6%9C%BA%E5%88%B6%E6%B7%B1%E5%BA%A6%E6%A2%B3%E7%90%86/" class="post-title-link" itemprop="url">Flutter 三棵树、生命周期、更新机制深度梳理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-11-13 21:43:39" itemprop="dateCreated datePublished" datetime="2026-11-13T21:43:39+08:00">2026-11-13</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>最近在复盘 Flutter 底层渲染链路、生命周期和节点更新逻辑，梳理出不少容易踩坑的底层细节：面试高频，日常开发也很容易混淆。本文聚焦 Widget / Element / RenderObject 三棵树的更新链路、<code>canUpdate</code> 与 RenderObject 的更新逻辑，并对比声明式与命令式 UI 的差异，适合移动端开发者阅读。</p>
+<h2 id="一、Dart-Isolate-并发模型：什么时候该开"><a href="#一、Dart-Isolate-并发模型：什么时候该开" class="headerlink" title="一、Dart Isolate 并发模型：什么时候该开"></a>一、Dart Isolate 并发模型：什么时候该开</h2>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/11/13/Flutter-%E4%B8%89%E6%A3%B5%E6%A0%91%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%9B%B4%E6%96%B0%E6%9C%BA%E5%88%B6%E6%B7%B1%E5%BA%A6%E6%A2%B3%E7%90%86/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/11/13/Swift-Concurrency-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%E9%99%84-Flutter-GCD-%E5%AF%B9%E7%85%A7/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -746,78 +812,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/04/27/flutter-%E9%9A%8F%E6%84%8F%E7%AC%94%E8%AE%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
-      <meta itemprop="name" content="lijifeng">
-      <meta itemprop="description" content="个人博客">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="个人技术生活分享">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2026/04/27/flutter-%E9%9A%8F%E6%84%8F%E7%AC%94%E8%AE%B0/" class="post-title-link" itemprop="url">flutter 随意笔记</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2026-04-27 16:50:24" itemprop="dateCreated datePublished" datetime="2026-04-27T16:50:24+08:00">2026-04-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2026-10-26 11:21:28" itemprop="dateModified" datetime="2026-10-26T11:21:28+08:00">2026-10-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="flutter-随意笔记"><a href="#flutter-随意笔记" class="headerlink" title="flutter 随意笔记"></a>flutter 随意笔记</h1><h2 id="一、混合开发内存分析"><a href="#一、混合开发内存分析" class="headerlink" title="一、混合开发内存分析"></a>一、混合开发内存分析</h2>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/04/27/flutter-%E9%9A%8F%E6%84%8F%E7%AC%94%E8%AE%B0/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -889,7 +883,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
