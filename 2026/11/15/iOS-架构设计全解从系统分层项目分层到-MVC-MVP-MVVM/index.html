@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="本文梳理 iOS 架构的几层含义、架构师设计项目分层的思路、三大 UI 模式（MVC、MVP、MVVM）的实现对比，以及对”架构师存在意义”的思考。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 架构设计全解：从系统分层、项目分层到 MVC &#x2F; MVP &#x2F; MVVM">
+<meta property="og:url" content="https://lijifeng168.com/2026/11/15/iOS-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E5%85%A8%E8%A7%A3%E4%BB%8E%E7%B3%BB%E7%BB%9F%E5%88%86%E5%B1%82%E9%A1%B9%E7%9B%AE%E5%88%86%E5%B1%82%E5%88%B0-MVC-MVP-MVVM/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="本文梳理 iOS 架构的几层含义、架构师设计项目分层的思路、三大 UI 模式（MVC、MVP、MVVM）的实现对比，以及对”架构师存在意义”的思考。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-11-15T05:30:00.000Z">
+<meta property="article:modified_time" content="2026-11-15T05:37:41.718Z">
+<meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="iOS, 架构设计">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/11/15/iOS-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E5%85%A8%E8%A7%A3%E4%BB%8E%E7%B3%BB%E7%BB%9F%E5%88%86%E5%B1%82%E9%A1%B9%E7%9B%AE%E5%88%86%E5%B1%82%E5%88%B0-MVC-MVP-MVVM/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>iOS 架构设计全解：从系统分层、项目分层到 MVC / MVP / MVVM | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/11/15/iOS-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E5%85%A8%E8%A7%A3%E4%BB%8E%E7%B3%BB%E7%BB%9F%E5%88%86%E5%B1%82%E9%A1%B9%E7%9B%AE%E5%88%86%E5%B1%82%E5%88%B0-MVC-MVP-MVVM/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          iOS 架构设计全解：从系统分层、项目分层到 MVC / MVP / MVVM
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-11-15 13:30:00 / 修改时间：13:37:41" itemprop="dateCreated datePublished" datetime="2026-11-15T13:30:00+08:00">2026-11-15</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本文梳理 iOS 架构的几层含义、架构师设计项目分层的思路、三大 UI 模式（MVC、MVP、MVVM）的实现对比，以及对”架构师存在意义”的思考。</p>
+<span id="more"></span>
+
+<h3 id="一、先搞清楚：什么是”iOS-架构”"><a href="#一、先搞清楚：什么是”iOS-架构”" class="headerlink" title="一、先搞清楚：什么是”iOS 架构”"></a>一、先搞清楚：什么是”iOS 架构”</h3><p>“iOS 架构”常见有两种含义，很多人会混淆。</p>
+<h4 id="1-iOS-系统架构（操作系统本身）"><a href="#1-iOS-系统架构（操作系统本身）" class="headerlink" title="1. iOS 系统架构（操作系统本身）"></a>1. iOS 系统架构（操作系统本身）</h4><p>苹果官方把 iOS 系统分为四层，从上到下是：</p>
+<ul>
+<li><strong>Cocoa Touch 层</strong>：UIKit、SwiftUI、通知、手势、多任务，直接面向 App 开发</li>
+<li><strong>Media 层</strong>：Core Graphics、Core Animation、AVFoundation、Metal 等图形音视频能力</li>
+<li><strong>Core Services 层</strong>：Foundation、Core Data、CloudKit、URLSession、Core Location 等</li>
+<li><strong>Core OS 层</strong>：内核（Darwin/XNU）、安全、驱动、底层网络和线程</li>
+</ul>
+<h4 id="2-App-软件架构（日常所说的”iOS-架构”多指这个）"><a href="#2-App-软件架构（日常所说的”iOS-架构”多指这个）" class="headerlink" title="2. App 软件架构（日常所说的”iOS 架构”多指这个）"></a>2. App 软件架构（日常所说的”iOS 架构”多指这个）</h4><p>指开发者如何组织自己 App 的代码，包括：</p>
+<ul>
+<li><strong>UI 层设计模式</strong>：MVC、MVVM、MVP、VIPER、Redux/TCA</li>
+<li><strong>分层架构</strong>：表现层 → 业务/领域层 → 数据层，Clean Architecture、DDD 思想</li>
+<li><strong>工程层面</strong>：模块化/组件化、依赖注入、路由/Coordinator、网络与持久化封装、日志埋点</li>
+<li><strong>质量保障</strong>：可测试性设计、CI/CD、代码规范、性能与稳定性监控</li>
+</ul>
+<blockquote>
+<p><strong>MVVM 与分层是什么关系？</strong> MVVM 是 UI 层的设计模式，分层是整体的结构划分，两者不冲突，通常搭配使用。例如：整体三层架构，表现层内部用 MVVM，数据层用 Repository 模式，再用模块化把不同业务拆开。</p>
+</blockquote>
+<h3 id="二、架构师如何设计项目分层"><a href="#二、架构师如何设计项目分层" class="headerlink" title="二、架构师如何设计项目分层"></a>二、架构师如何设计项目分层</h3><p>分层设计的核心是回答三个问题：<strong>职责怎么切、依赖往哪指、变化被隔离在哪</strong>。</p>
+<h4 id="1-典型的整体分层（由上到下）"><a href="#1-典型的整体分层（由上到下）" class="headerlink" title="1. 典型的整体分层（由上到下）"></a>1. 典型的整体分层（由上到下）</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────┐</span><br><span class="line">│  App 壳层（App Shell）        │  启动、生命周期、DI 组装、路由注册</span><br><span class="line">├─────────────────────────────┤</span><br><span class="line">│  业务模块层（Feature Modules）│  首页、订单、个人中心……各自独立</span><br><span class="line">├─────────────────────────────┤</span><br><span class="line">│  业务基础层（Business Base）  │  账号、支付、分享、统一弹窗等</span><br><span class="line">├─────────────────────────────┤</span><br><span class="line">│  基础服务层（Infrastructure） │  网络、存储、日志、埋点、图片、路由</span><br><span class="line">├─────────────────────────────┤</span><br><span class="line">│  工具/公共层（Foundation）    │  扩展、工具类、UI 组件库、设计规范</span><br><span class="line">└─────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>依赖规则</strong>：只允许上层依赖下层，同层之间不直接依赖，需要通信就通过协议或路由。</p>
+<h4 id="2-单个业务模块内部再分层"><a href="#2-单个业务模块内部再分层" class="headerlink" title="2. 单个业务模块内部再分层"></a>2. 单个业务模块内部再分层</h4><p>每个 Feature 内部通常采用 Clean Architecture 的简化版：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>内容</th>
+<th>依赖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Presentation</td>
+<td>View、ViewController、ViewModel</td>
+<td>→ Domain</td>
+</tr>
+<tr>
+<td>Domain</td>
+<td>Entity、UseCase、Repository 协议</td>
+<td>不依赖任何层（最纯净）</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>Repository 实现、网络 DTO、数据库、Mapper</td>
+<td>→ Domain（实现其协议）</td>
+</tr>
+</tbody></table>
+<p>关键是<strong>依赖倒置</strong>：Domain 定义 Repository 协议，Data 层去实现，业务逻辑不关心数据来自网络还是缓存。</p>
+<h4 id="3-架构师要重点设计的六件事"><a href="#3-架构师要重点设计的六件事" class="headerlink" title="3. 架构师要重点设计的六件事"></a>3. 架构师要重点设计的六件事</h4><ol>
+<li><strong>模块划分与边界</strong>：按业务域拆，而不是按技术类型拆；每个模块用独立的 Swift Package 或 Framework，并拆出 Interface（对外协议）与 Implementation（内部实现），其他模块只依赖 Interface，避免循环依赖并加快编译。</li>
+<li><strong>模块间通信</strong>：页面跳转用路由或 Coordinator；服务调用用协议 + 服务注册中心；事件广播用 EventBus / Combine / NotificationCenter（要克制）。</li>
+<li><strong>依赖注入</strong>：在 App 壳层统一组装，业务层面向协议编程，以构造器注入为主，复杂场景可用 Swinject、Factory 等容器。</li>
+<li><strong>网络与数据层</strong>：封装请求构建、拦截器（鉴权、重试、日志）、统一错误模型、DTO 到 Domain Entity 的映射；缓存与数据库要抽象，保证可替换。</li>
+<li><strong>UI 层规范</strong>：选定一种模式（MVVM 最常见）并制定约定，例如 ViewModel 不引用 UIKit；沉淀统一的组件库和设计 Token。</li>
+<li><strong>工程与质量体系</strong>：多 Package 管理、二进制缓存、CI/CD、单测策略（Domain 层覆盖率要求最高）、SwiftLint、监控、Code Review 规则。</li>
+</ol>
+<h4 id="4-按项目规模裁剪"><a href="#4-按项目规模裁剪" class="headerlink" title="4. 按项目规模裁剪"></a>4. 按项目规模裁剪</h4><ul>
+<li><strong>小项目 / 初创期</strong>：MVVM + 简单三层（View / ViewModel / Service），不要过度设计</li>
+<li><strong>中型项目</strong>：加上 Repository、DI、Coordinator，开始按功能拆 Package</li>
+<li><strong>大型多团队项目</strong>：完整组件化 + 路由 + Interface/Impl 分离 + 二进制化 + 架构治理（依赖检查、循环依赖检测）</li>
+</ul>
+<h4 id="5-常见误区"><a href="#5-常见误区" class="headerlink" title="5. 常见误区"></a>5. 常见误区</h4><ul>
+<li>为了分层而分层，一个简单功能写出七八个类</li>
+<li>层与层之间用 Notification 或全局单例偷偷通信，破坏依赖规则</li>
+<li>只拆了目录，没拆编译边界，模块之间依然互相引用</li>
+<li>公共层不断膨胀，最后变成”垃圾桶”</li>
+</ul>
+<h3 id="三、MVC、MVP、MVVM-的实现"><a href="#三、MVC、MVP、MVVM-的实现" class="headerlink" title="三、MVC、MVP、MVVM 的实现"></a>三、MVC、MVP、MVVM 的实现</h3><p>下面用同一个需求贯穿三种模式：<strong>登录页</strong>（输入账号密码，点击登录，成功跳转、失败提示）。</p>
+<h4 id="1-MVC"><a href="#1-MVC" class="headerlink" title="1. MVC"></a>1. MVC</h4><ul>
+<li><strong>Model</strong>：数据和业务逻辑（用户模型、登录服务）</li>
+<li><strong>View</strong>：界面展示（UIView、Storyboard、xib）</li>
+<li><strong>Controller</strong>：协调者，接收用户操作、调用 Model、更新 View</li>
+</ul>
+<p>由于 UIKit 中 ViewController 同时管理 View 的生命周期，View 和 Controller 实际上紧耦合。</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Model</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">User</span> &#123; <span class="keyword">let</span> name: <span class="type">String</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">AuthService</span> &#123;</span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">login</span>(<span class="params">account</span>: <span class="type">String</span>, <span class="params">password</span>: <span class="type">String</span>,</span><br><span class="line">               <span class="params">completion</span>: <span class="keyword">@escaping</span> (<span class="type">Result</span>&lt;<span class="type">User</span>, <span class="type">Error</span>&gt;) -&gt; <span class="type">Void</span>) &#123;</span><br><span class="line">        <span class="comment">// 网络请求...</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Controller（同时承担了 View 逻辑和业务协调）</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginViewController</span>: <span class="title class_">UIViewController</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> service <span class="operator">=</span> <span class="type">AuthService</span>()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">@objc</span> <span class="keyword">private</span> <span class="keyword">func</span> <span class="title function_">loginTapped</span>() &#123;</span><br><span class="line">        <span class="keyword">guard</span> <span class="keyword">let</span> account <span class="operator">=</span> accountField.text, <span class="operator">!</span>account.isEmpty,</span><br><span class="line">              <span class="keyword">let</span> pwd <span class="operator">=</span> passwordField.text, pwd.count <span class="operator">&gt;=</span> <span class="number">6</span> <span class="keyword">else</span> &#123;</span><br><span class="line">            showAlert(<span class="string">&quot;账号或密码格式不正确&quot;</span>)</span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        &#125;</span><br><span class="line">        loginButton.isEnabled <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">        service.login(account: account, password: pwd) &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] result <span class="keyword">in</span></span><br><span class="line">            <span class="type">DispatchQueue</span>.main.async &#123;</span><br><span class="line">                <span class="keyword">self</span><span class="operator">?</span>.loginButton.isEnabled <span class="operator">=</span> <span class="literal">true</span></span><br><span class="line">                <span class="keyword">switch</span> result &#123;</span><br><span class="line">                <span class="keyword">case</span> .success: <span class="keyword">self</span><span class="operator">?</span>.navigateToHome()</span><br><span class="line">                <span class="keyword">case</span> .failure(<span class="keyword">let</span> e): <span class="keyword">self</span><span class="operator">?</span>.showAlert(e.localizedDescription)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>简单直观，上手快</td>
+<td>Controller 臃肿（Massive View Controller）</td>
+</tr>
+<tr>
+<td>苹果官方支持，资料多</td>
+<td>校验、格式化、状态管理堆在 VC 里，难以单测</td>
+</tr>
+<tr>
+<td>小页面开发效率高</td>
+<td>View 和 Controller 耦合</td>
+</tr>
+</tbody></table>
+<h4 id="2-MVP"><a href="#2-MVP" class="headerlink" title="2. MVP"></a>2. MVP</h4><ul>
+<li><strong>View</strong>：ViewController + UIView，只负责展示和转发用户事件</li>
+<li><strong>Presenter</strong>：持有业务和展示逻辑，通过协议操作 View，因此不依赖 UIKit，可脱离界面做单测</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">View ──(用户事件)──▶ Presenter ──▶ Model</span><br><span class="line">View ◀──(协议方法)── Presenter</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// View 协议：Presenter 只认识这个接口</span></span><br><span class="line"><span class="keyword">protocol</span> <span class="title class_">LoginView</span>: <span class="title class_">AnyObject</span> &#123;</span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">showLoading</span>(<span class="keyword">_</span> <span class="params">show</span>: <span class="type">Bool</span>)</span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">showError</span>(<span class="keyword">_</span> <span class="params">message</span>: <span class="type">String</span>)</span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">navigateToHome</span>()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Presenter：不 import UIKit</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginPresenter</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">weak</span> <span class="keyword">var</span> view: <span class="type">LoginView</span>?</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> service: <span class="type">AuthService</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">init</span>(<span class="params">view</span>: <span class="type">LoginView</span>, <span class="params">service</span>: <span class="type">AuthService</span> <span class="operator">=</span> <span class="type">AuthService</span>()) &#123;</span><br><span class="line">        <span class="keyword">self</span>.view <span class="operator">=</span> view</span><br><span class="line">        <span class="keyword">self</span>.service <span class="operator">=</span> service</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">loginTapped</span>(<span class="params">account</span>: <span class="type">String</span>?, <span class="params">password</span>: <span class="type">String</span>?) &#123;</span><br><span class="line">        <span class="keyword">guard</span> <span class="keyword">let</span> account, <span class="operator">!</span>account.isEmpty,</span><br><span class="line">              <span class="keyword">let</span> password, password.count <span class="operator">&gt;=</span> <span class="number">6</span> <span class="keyword">else</span> &#123;</span><br><span class="line">            view<span class="operator">?</span>.showError(<span class="string">&quot;账号或密码格式不正确&quot;</span>)</span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        &#125;</span><br><span class="line">        view<span class="operator">?</span>.showLoading(<span class="literal">true</span>)</span><br><span class="line">        service.login(account: account, password: password) &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] result <span class="keyword">in</span></span><br><span class="line">            <span class="type">DispatchQueue</span>.main.async &#123;</span><br><span class="line">                <span class="keyword">self</span><span class="operator">?</span>.view<span class="operator">?</span>.showLoading(<span class="literal">false</span>)</span><br><span class="line">                <span class="keyword">switch</span> result &#123;</span><br><span class="line">                <span class="keyword">case</span> .success: <span class="keyword">self</span><span class="operator">?</span>.view<span class="operator">?</span>.navigateToHome()</span><br><span class="line">                <span class="keyword">case</span> .failure(<span class="keyword">let</span> e): <span class="keyword">self</span><span class="operator">?</span>.view<span class="operator">?</span>.showError(e.localizedDescription)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// View：只做展示 + 转发事件</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginViewController</span>: <span class="title class_">UIViewController</span>, <span class="title class_">LoginView</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">lazy</span> <span class="keyword">var</span> presenter <span class="operator">=</span> <span class="type">LoginPresenter</span>(view: <span class="keyword">self</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">@objc</span> <span class="keyword">private</span> <span class="keyword">func</span> <span class="title function_">loginTapped</span>() &#123;</span><br><span class="line">        presenter.loginTapped(account: accountField.text,</span><br><span class="line">                              password: passwordField.text)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>逻辑与 UIKit 解耦，易于单测</td>
+<td>View 协议方法随页面复杂度膨胀</td>
+</tr>
+<tr>
+<td>职责清晰，VC 变薄</td>
+<td>协议 + Presenter，样板代码多</td>
+</tr>
+<tr>
+<td>不依赖任何绑定框架</td>
+<td>仍需手动同步状态</td>
+</tr>
+</tbody></table>
+<h4 id="3-MVVM"><a href="#3-MVVM" class="headerlink" title="3. MVVM"></a>3. MVVM</h4><p>MVP 是 Presenter 主动调用 View；MVVM 是 View 被动订阅 ViewModel 的状态变化（数据绑定）。ViewModel 完全不知道 View 的存在，单向依赖更彻底。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">View ──(调用方法/命令)──▶ ViewModel ──▶ Model</span><br><span class="line">View ◀──(绑定/订阅状态)── ViewModel</span><br></pre></td></tr></table></figure>
+
+<p><strong>UIKit + Combine 版本</strong>：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> Combine</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginViewModel</span> &#123;</span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> account <span class="operator">=</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> password <span class="operator">=</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">private(set)</span> <span class="keyword">var</span> isLoading <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">private(set)</span> <span class="keyword">var</span> errorMessage: <span class="type">String</span>?</span><br><span class="line">    <span class="keyword">let</span> loginSucceeded <span class="operator">=</span> <span class="type">PassthroughSubject</span>&lt;<span class="type">Void</span>, <span class="type">Never</span>&gt;()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 派生状态：按钮是否可点击</span></span><br><span class="line">    <span class="keyword">var</span> isLoginEnabled: <span class="type">AnyPublisher</span>&lt;<span class="type">Bool</span>, <span class="type">Never</span>&gt; &#123;</span><br><span class="line">        <span class="type">Publishers</span>.<span class="type">CombineLatest3</span>(<span class="variable">$account</span>, <span class="variable">$password</span>, <span class="variable">$isLoading</span>)</span><br><span class="line">            .map &#123; account, pwd, loading <span class="keyword">in</span></span><br><span class="line">                <span class="operator">!</span>account.isEmpty <span class="operator">&amp;&amp;</span> pwd.count <span class="operator">&gt;=</span> <span class="number">6</span> <span class="operator">&amp;&amp;</span> <span class="operator">!</span>loading</span><br><span class="line">            &#125;</span><br><span class="line">            .eraseToAnyPublisher()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> service: <span class="type">AuthService</span></span><br><span class="line">    <span class="keyword">init</span>(<span class="params">service</span>: <span class="type">AuthService</span> <span class="operator">=</span> <span class="type">AuthService</span>()) &#123; <span class="keyword">self</span>.service <span class="operator">=</span> service &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">login</span>() &#123;</span><br><span class="line">        isLoading <span class="operator">=</span> <span class="literal">true</span></span><br><span class="line">        service.login(account: account, password: password) &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] result <span class="keyword">in</span></span><br><span class="line">            <span class="type">DispatchQueue</span>.main.async &#123;</span><br><span class="line">                <span class="keyword">self</span><span class="operator">?</span>.isLoading <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">                <span class="keyword">switch</span> result &#123;</span><br><span class="line">                <span class="keyword">case</span> .success: <span class="keyword">self</span><span class="operator">?</span>.loginSucceeded.send()</span><br><span class="line">                <span class="keyword">case</span> .failure(<span class="keyword">let</span> e): <span class="keyword">self</span><span class="operator">?</span>.errorMessage <span class="operator">=</span> e.localizedDescription</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// View：只做绑定</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginViewController</span>: <span class="title class_">UIViewController</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">let</span> viewModel <span class="operator">=</span> <span class="type">LoginViewModel</span>()</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">var</span> cancellables <span class="operator">=</span> <span class="type">Set</span>&lt;<span class="type">AnyCancellable</span>&gt;()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">func</span> <span class="title function_">bind</span>() &#123;</span><br><span class="line">        viewModel.isLoginEnabled</span><br><span class="line">            .receive(on: <span class="type">DispatchQueue</span>.main)</span><br><span class="line">            .sink &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] <span class="keyword">in</span> <span class="keyword">self</span><span class="operator">?</span>.loginButton.isEnabled <span class="operator">=</span> <span class="variable">$0</span> &#125;</span><br><span class="line">            .store(in: <span class="operator">&amp;</span>cancellables)</span><br><span class="line"></span><br><span class="line">        viewModel.<span class="variable">$errorMessage</span></span><br><span class="line">            .compactMap &#123; <span class="variable">$0</span> &#125;</span><br><span class="line">            .sink &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] <span class="keyword">in</span> <span class="keyword">self</span><span class="operator">?</span>.showAlert(<span class="variable">$0</span>) &#125;</span><br><span class="line">            .store(in: <span class="operator">&amp;</span>cancellables)</span><br><span class="line"></span><br><span class="line">        viewModel.loginSucceeded</span><br><span class="line">            .sink &#123; [<span class="keyword">weak</span> <span class="keyword">self</span>] <span class="keyword">in</span> <span class="keyword">self</span><span class="operator">?</span>.navigateToHome() &#125;</span><br><span class="line">            .store(in: <span class="operator">&amp;</span>cancellables)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>SwiftUI 版本</strong>（天然适配 MVVM）：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@MainActor</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">LoginViewModel</span>: <span class="title class_">ObservableObject</span> &#123;</span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> account <span class="operator">=</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> password <span class="operator">=</span> <span class="string">&quot;&quot;</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> isLoading <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="meta">@Published</span> <span class="keyword">var</span> errorMessage: <span class="type">String</span>?</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> canLogin: <span class="type">Bool</span> &#123; <span class="operator">!</span>account.isEmpty <span class="operator">&amp;&amp;</span> password.count <span class="operator">&gt;=</span> <span class="number">6</span> <span class="operator">&amp;&amp;</span> <span class="operator">!</span>isLoading &#125;</span><br><span class="line">    <span class="keyword">func</span> <span class="title function_">login</span>() <span class="keyword">async</span> &#123; <span class="comment">/* 调用 service，更新状态 */</span> &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">LoginView</span>: <span class="title class_">View</span> &#123;</span><br><span class="line">    <span class="meta">@StateObject</span> <span class="keyword">private</span> <span class="keyword">var</span> vm <span class="operator">=</span> <span class="type">LoginViewModel</span>()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> &#123;</span><br><span class="line">        <span class="type">VStack</span> &#123;</span><br><span class="line">            <span class="type">TextField</span>(<span class="string">&quot;账号&quot;</span>, text: <span class="variable">$vm</span>.account)</span><br><span class="line">            <span class="type">SecureField</span>(<span class="string">&quot;密码&quot;</span>, text: <span class="variable">$vm</span>.password)</span><br><span class="line">            <span class="type">Button</span>(<span class="string">&quot;登录&quot;</span>) &#123; <span class="type">Task</span> &#123; <span class="keyword">await</span> vm.login() &#125; &#125;</span><br><span class="line">                .disabled(<span class="operator">!</span>vm.canLogin)</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">let</span> msg <span class="operator">=</span> vm.errorMessage &#123; <span class="type">Text</span>(msg).foregroundColor(.red) &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ViewModel 不依赖 View，最易测试</td>
+<td>需要绑定机制，有学习成本</td>
+</tr>
+<tr>
+<td>状态驱动 UI，减少手动同步</td>
+<td>简单页面会显得过度设计</td>
+</tr>
+<tr>
+<td>与 SwiftUI 天然契合</td>
+<td>绑定链过长时调试困难，ViewModel 也可能臃肿</td>
+</tr>
+</tbody></table>
+<h4 id="4-三者对比"><a href="#4-三者对比" class="headerlink" title="4. 三者对比"></a>4. 三者对比</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MVC</th>
+<th>MVP</th>
+<th>MVVM</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>中间层</td>
+<td>Controller</td>
+<td>Presenter</td>
+<td>ViewModel</td>
+</tr>
+<tr>
+<td>View 与中间层关系</td>
+<td>紧耦合，Controller 持有 View</td>
+<td>Presenter 持有 View 协议引用</td>
+<td>ViewModel 不持有 View，View 订阅 ViewModel</td>
+</tr>
+<tr>
+<td>更新 UI 的方式</td>
+<td>Controller 直接操作控件</td>
+<td>Presenter 调用 View 协议方法</td>
+<td>数据绑定，状态变化自动刷新</td>
+</tr>
+<tr>
+<td>可测试性</td>
+<td>差</td>
+<td>好</td>
+<td>最好</td>
+</tr>
+<tr>
+<td>样板代码</td>
+<td>少</td>
+<td>较多（协议）</td>
+<td>中等（依赖绑定框架）</td>
+</tr>
+<tr>
+<td>典型适用</td>
+<td>小项目、原型</td>
+<td>不想引入响应式框架的团队</td>
+<td>Combine / RxSwift / SwiftUI 项目</td>
+</tr>
+</tbody></table>
+<h4 id="5-选型建议"><a href="#5-选型建议" class="headerlink" title="5. 选型建议"></a>5. 选型建议</h4><ul>
+<li><strong>页面简单、快速交付</strong>：MVC 够用，但要把网络、校验等逻辑拆成独立类，不要全塞 VC</li>
+<li><strong>不想引入响应式框架，但要可测试</strong>：MVP</li>
+<li><strong>使用 SwiftUI 或已有 Combine / RxSwift</strong>：MVVM 是首选</li>
+<li><strong>页面状态复杂、需要严格可追溯</strong>：可在 MVVM 基础上走向单向数据流（Redux / TCA）</li>
+</ul>
+<blockquote>
+<p>注意：这三种模式只解决 UI 层怎么组织，真正支撑大型项目的是前面讲的<strong>分层、模块化和依赖注入</strong>，它们是搭配关系而不是替代关系。</p>
+</blockquote>
+<h3 id="四、架构师存在的意义"><a href="#四、架构师存在的意义" class="headerlink" title="四、架构师存在的意义"></a>四、架构师存在的意义</h3><p>架构师的价值不在于画出漂亮的图，而在于让系统和团队在变化中仍能高效、稳定地前进。</p>
+<ol>
+<li><strong>管理复杂度</strong>：功能和人员增长会让代码关系呈指数级膨胀。通过分层、模块化、边界划分，让每个人只需理解系统的一小部分。好的架构让普通人也能写出不出错的代码，而不是依赖个别高手。</li>
+<li><strong>为变化做准备，而不是预测未来</strong>：区分稳定部分（业务规则、领域模型）与易变部分（UI 框架、网络库、第三方 SDK），把易变的隔离在稳定边界之外。只在真正有变化风险的地方付出抽象的成本。</li>
+<li><strong>做取舍，并为取舍负责</strong>：开发速度 vs 长期可维护性，灵活性 vs 简单性，统一规范 vs 团队自主。没有最好的架构，只有当前约束下最合适的架构。</li>
+<li><strong>对齐团队，降低协作成本</strong>：统一术语和约定，明确模块边界让团队并行开发，沉淀基础设施避免重复造轮子。很多架构问题其实是组织问题的映射（康威定律）。</li>
+<li><strong>守护长期质量</strong>：项目腐化是缓慢发生的，一个临时的全局单例、一次”先跳过分层”的捷径，积累起来就是技术债。要用依赖检查、循环依赖检测、Lint 规则等自动化手段约束，并持续重构。</li>
+</ol>
+<p><strong>需要警惕的几点</strong></p>
+<ul>
+<li>架构师不应只做设计、不写代码。脱离一线的架构容易变成空中楼阁，最好的架构师仍深度参与代码与 Code Review。</li>
+<li>架构不是越复杂越好。五人小团队套上完整组件化 + 路由 + 多层抽象，是在为简历服务而不是为项目服务。能用简单方案解决的问题，就不该引入复杂方案。</li>
+<li>架构师不是决策的垄断者。让团队参与讨论，用 ADR（架构决策记录）记录背景，方案更容易被执行。</li>
+</ul>
+<blockquote>
+<p>架构师存在的意义，是在不确定的环境中，帮团队做出可解释、可演进、成本可控的技术决策，让系统的复杂度增长慢于业务的增长。<br><strong>架构是一种责任，而不一定是一个头衔。</strong></p>
+</blockquote>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ul>
+<li>“iOS 架构”分系统架构和 App 架构两层含义，日常讨论多指后者</li>
+<li>MVC / MVP / MVVM 解决 UI 层组织问题，分层、模块化、依赖注入解决整体结构问题，二者是搭配关系</li>
+<li>分层设计的核心是：职责清晰、依赖单向、变化隔离</li>
+<li>架构要匹配项目规模，克制过度设计</li>
+<li>架构师的价值在于管理复杂度、做可解释的取舍，并持续守护系统质量</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/iOS-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" rel="tag"># iOS, 架构设计</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/11/13/Flutter-%E4%B8%89%E6%A3%B5%E6%A0%91%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E6%9B%B4%E6%96%B0%E6%9C%BA%E5%88%B6%E6%B7%B1%E5%BA%A6%E6%A2%B3%E7%90%86/" rel="prev" title="Flutter 三棵树、生命周期、更新机制深度梳理">
+      <i class="fa fa-chevron-left"></i> Flutter 三棵树、生命周期、更新机制深度梳理
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%85%88%E6%90%9E%E6%B8%85%E6%A5%9A%EF%BC%9A%E4%BB%80%E4%B9%88%E6%98%AF%E2%80%9DiOS-%E6%9E%B6%E6%9E%84%E2%80%9D"><span class="nav-number">1.</span> <span class="nav-text">一、先搞清楚：什么是”iOS 架构”</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-iOS-%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%EF%BC%88%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%9C%AC%E8%BA%AB%EF%BC%89"><span class="nav-number">1.1.</span> <span class="nav-text">1. iOS 系统架构（操作系统本身）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-App-%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84%EF%BC%88%E6%97%A5%E5%B8%B8%E6%89%80%E8%AF%B4%E7%9A%84%E2%80%9DiOS-%E6%9E%B6%E6%9E%84%E2%80%9D%E5%A4%9A%E6%8C%87%E8%BF%99%E4%B8%AA%EF%BC%89"><span class="nav-number">1.2.</span> <span class="nav-text">2. App 软件架构（日常所说的”iOS 架构”多指这个）</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%9E%B6%E6%9E%84%E5%B8%88%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E9%A1%B9%E7%9B%AE%E5%88%86%E5%B1%82"><span class="nav-number">2.</span> <span class="nav-text">二、架构师如何设计项目分层</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E5%85%B8%E5%9E%8B%E7%9A%84%E6%95%B4%E4%BD%93%E5%88%86%E5%B1%82%EF%BC%88%E7%94%B1%E4%B8%8A%E5%88%B0%E4%B8%8B%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">1. 典型的整体分层（由上到下）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E5%8D%95%E4%B8%AA%E4%B8%9A%E5%8A%A1%E6%A8%A1%E5%9D%97%E5%86%85%E9%83%A8%E5%86%8D%E5%88%86%E5%B1%82"><span class="nav-number">2.2.</span> <span class="nav-text">2. 单个业务模块内部再分层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E6%9E%B6%E6%9E%84%E5%B8%88%E8%A6%81%E9%87%8D%E7%82%B9%E8%AE%BE%E8%AE%A1%E7%9A%84%E5%85%AD%E4%BB%B6%E4%BA%8B"><span class="nav-number">2.3.</span> <span class="nav-text">3. 架构师要重点设计的六件事</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E6%8C%89%E9%A1%B9%E7%9B%AE%E8%A7%84%E6%A8%A1%E8%A3%81%E5%89%AA"><span class="nav-number">2.4.</span> <span class="nav-text">4. 按项目规模裁剪</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA"><span class="nav-number">2.5.</span> <span class="nav-text">5. 常见误区</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%89%E3%80%81MVC%E3%80%81MVP%E3%80%81MVVM-%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">三、MVC、MVP、MVVM 的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-MVC"><span class="nav-number">3.1.</span> <span class="nav-text">1. MVC</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-MVP"><span class="nav-number">3.2.</span> <span class="nav-text">2. MVP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-MVVM"><span class="nav-number">3.3.</span> <span class="nav-text">3. MVVM</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E4%B8%89%E8%80%85%E5%AF%B9%E6%AF%94"><span class="nav-number">3.4.</span> <span class="nav-text">4. 三者对比</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-%E9%80%89%E5%9E%8B%E5%BB%BA%E8%AE%AE"><span class="nav-number">3.5.</span> <span class="nav-text">5. 选型建议</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%9E%B6%E6%9E%84%E5%B8%88%E5%AD%98%E5%9C%A8%E7%9A%84%E6%84%8F%E4%B9%89"><span class="nav-number">4.</span> <span class="nav-text">四、架构师存在的意义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
