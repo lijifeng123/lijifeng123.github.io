@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"lijifeng168.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计 本文结合一个真实 iOS 项目的 WebView 封装，梳理 Hybrid 页面容器的整体设计，并重点拆解 Native 与 Web 的双向通信、第三方 WebViewJavascriptBridge 的底层原理，以及如何通过模块化避免容器类无限膨胀。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计">
+<meta property="og:url" content="https://lijifeng168.com/2026/11/19/iOS-WebView-%E5%B0%81%E8%A3%85%E5%AE%9E%E6%88%98Hybrid-%E5%AE%B9%E5%99%A8JSBridge-%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%8C%96%E4%BA%A4%E4%BA%92%E8%AE%BE%E8%AE%A1/index.html">
+<meta property="og:site_name" content="个人技术生活分享">
+<meta property="og:description" content="iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计 本文结合一个真实 iOS 项目的 WebView 封装，梳理 Hybrid 页面容器的整体设计，并重点拆解 Native 与 Web 的双向通信、第三方 WebViewJavascriptBridge 的底层原理，以及如何通过模块化避免容器类无限膨胀。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-11-19T14:59:23.000Z">
+<meta property="article:modified_time" content="2026-11-19T15:03:24.964Z">
+<meta property="article:author" content="lijifeng">
+<meta property="article:tag" content="iOS">
+<meta property="article:tag" content="WKWebView">
+<meta property="article:tag" content="Hybrid">
+<meta property="article:tag" content="JSBridge">
+<meta property="article:tag" content="WebView">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://lijifeng168.com/2026/11/19/iOS-WebView-%E5%B0%81%E8%A3%85%E5%AE%9E%E6%88%98Hybrid-%E5%AE%B9%E5%99%A8JSBridge-%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%8C%96%E4%BA%A4%E4%BA%92%E8%AE%BE%E8%AE%A1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计 | 个人技术生活分享</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">个人技术生活分享</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">文明其精神，野蛮其体魄</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://lijifeng168.com/2026/11/19/iOS-WebView-%E5%B0%81%E8%A3%85%E5%AE%9E%E6%88%98Hybrid-%E5%AE%B9%E5%99%A8JSBridge-%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%8C%96%E4%BA%A4%E4%BA%92%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+      <meta itemprop="name" content="lijifeng">
+      <meta itemprop="description" content="个人博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="个人技术生活分享">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-11-19 22:59:23 / 修改时间：23:03:24" itemprop="dateCreated datePublished" datetime="2026-11-19T22:59:23+08:00">2026-11-19</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="iOS-WebView-封装实战：Hybrid-容器、JSBridge-与模块化交互设计"><a href="#iOS-WebView-封装实战：Hybrid-容器、JSBridge-与模块化交互设计" class="headerlink" title="iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计"></a>iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计</h1><blockquote>
+<p>本文结合一个真实 iOS 项目的 WebView 封装，梳理 Hybrid 页面容器的整体设计，并重点拆解 Native 与 Web 的双向通信、第三方 WebViewJavascriptBridge 的底层原理，以及如何通过模块化避免容器类无限膨胀。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="一、为什么不能只创建一个-WKWebView"><a href="#一、为什么不能只创建一个-WKWebView" class="headerlink" title="一、为什么不能只创建一个 WKWebView"></a>一、为什么不能只创建一个 WKWebView</h2><p>在业务初期，打开一个 H5 页面可能只需要几行代码：创建 <code>WKWebView</code>、构造 <code>NSURLRequest</code>、调用 <code>loadRequest:</code>。</p>
+<p>但随着 Hybrid 业务增多，问题会快速出现：</p>
+<ul>
+<li>每个页面都重复处理导航栏、进度条、Loading 和返回逻辑；</li>
+<li>H5 需要调用分享、登录、相机、原生路由等 Native 能力；</li>
+<li>Native 也需要向 H5 发送 App 前后台状态、页面关闭通知等消息；</li>
+<li>不同页面对标题、Cookie、Header、外链拦截的要求不同；</li>
+<li>JS 调用方法越来越多，最终全部堆进一个庞大的 Controller；</li>
+<li>Web 内容进程异常、页面加载失败和脚本消息处理器释放容易被忽略。</li>
+</ul>
+<p>因此，一个可长期维护的 WebView 封装，不应该只是 <code>WKWebView</code> 的语法糖，而应该是一个完整的 <strong>Hybrid 页面容器</strong>：</p>
+<blockquote>
+<p>统一入口和配置 + WebView 容器 + JSBridge 双向通信 + 模块化原生能力 + URL 路由拦截 + 生命周期管理。</p>
+</blockquote>
+<h2 id="二、整体架构：容器、桥接层和能力模块"><a href="#二、整体架构：容器、桥接层和能力模块" class="headerlink" title="二、整体架构：容器、桥接层和能力模块"></a>二、整体架构：容器、桥接层和能力模块</h2><p>本文项目以 <code>UGBridgeWebViewController</code> 为统一页面入口，整体结构如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">业务方 / Router</span><br><span class="line">      │ url + UGWebUIConfig</span><br><span class="line">      ▼</span><br><span class="line">UGBridgeWebViewController</span><br><span class="line">      │</span><br><span class="line">      ├── WKWebView</span><br><span class="line">      │     └── 页面加载、渲染、进度和系统弹窗</span><br><span class="line">      │</span><br><span class="line">      ├── UGHybridClient</span><br><span class="line">      │     └── UGHybridBridge</span><br><span class="line">      │           └── WKWebViewJavascriptBridge</span><br><span class="line">      │                 └── WKWebView 原生能力</span><br><span class="line">      │</span><br><span class="line">      ├── Hybrid Modules</span><br><span class="line">      │     ├── App / 容器生命周期</span><br><span class="line">      │     ├── Navigation</span><br><span class="line">      │     ├── Render</span><br><span class="line">      │     └── 具体业务模块</span><br><span class="line">      │</span><br><span class="line">      ├── URL Router / ExternalLinkInterceptor</span><br><span class="line">      └── WebViewLifecycleWatcher</span><br></pre></td></tr></table></figure>
+
+<p>这里各层的职责比较清晰：</p>
+<ul>
+<li><strong>容器层</strong>：负责视图、导航栏、返回、加载状态和 WebView 生命周期；</li>
+<li><strong>配置层</strong>：描述不同页面的展示和加载差异；</li>
+<li><strong>桥接层</strong>：负责 Native 与 JS 的消息传输和序列化；</li>
+<li><strong>模块层</strong>：将导航、渲染、分享等原生能力拆成独立模块；</li>
+<li><strong>路由层</strong>：统一处理 App 内路由、外链和自定义 Scheme；</li>
+<li><strong>监控层</strong>：记录页面加载、失败和 Web 内容进程异常等事件。</li>
+</ul>
+<h2 id="三、容器层：统一初始化和页面配置"><a href="#三、容器层：统一初始化和页面配置" class="headerlink" title="三、容器层：统一初始化和页面配置"></a>三、容器层：统一初始化和页面配置</h2><h3 id="1-统一-WebView-创建流程"><a href="#1-统一-WebView-创建流程" class="headerlink" title="1. 统一 WebView 创建流程"></a>1. 统一 WebView 创建流程</h3><p>容器在内部集中完成 <code>WKWebViewConfiguration</code> 和 <code>WKWebView</code> 的初始化，包括：</p>
+<ul>
+<li>追加自定义 UserAgent 和业务场景标识；</li>
+<li>配置内联播放、AirPlay 和自动播放策略；</li>
+<li>根据业务需要注入 <code>WKUserScript</code>；</li>
+<li>设置 <code>WKNavigationDelegate</code> 和 <code>WKUIDelegate</code>；</li>
+<li>监听网页标题和 <code>estimatedProgress</code>；</li>
+<li>DEBUG 环境开启 Web Inspector 和资源加载调试。</li>
+</ul>
+<p>业务方不再关心这些细节，只需要提供 URL 和配置。</p>
+<p>一个典型的页面初始化顺序是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">创建并添加 WebView</span><br><span class="line">→ 注册生命周期监听</span><br><span class="line">→ 注册 Hybrid Modules</span><br><span class="line">→ 配置原生导航栏和进度条</span><br><span class="line">→ 注册 JS 方法</span><br><span class="line">→ 配置 Cookie</span><br><span class="line">→ 构造请求并加载 URL</span><br><span class="line">→ 展示 Loading</span><br></pre></td></tr></table></figure>
+
+<p>初始化顺序很重要。例如 Bridge 和 Cookie 应尽量在正式加载页面前准备好，否则 H5 初始化时调用 Native，可能遇到方法尚未注册或登录态尚未注入的问题。</p>
+<h3 id="2-用配置对象承接页面差异"><a href="#2-用配置对象承接页面差异" class="headerlink" title="2. 用配置对象承接页面差异"></a>2. 用配置对象承接页面差异</h3><p>项目通过 <code>UGWebUIConfig</code> 控制不同页面的行为，常见配置包括：</p>
+<ul>
+<li>是否自动使用网页标题；</li>
+<li>是否显示进度条和中心 Loading；</li>
+<li>是否支持返回、分享和旋转；</li>
+<li>是否拦截外链；</li>
+<li>自定义 Cookie 和 HTTP Header；</li>
+<li>是否清除认证信息；</li>
+<li>首页 Tab 等特殊场景。</li>
+</ul>
+<p>这种做法的核心价值是：<strong>用配置解决页面差异，而不是为每种业务创建一个 WebViewController 子类。</strong></p>
+<p>对于真正属于某个业务的特殊行为，则应该放进业务 Module，而不是继续给配置对象增加大量一次性开关。</p>
+<h2 id="四、Native-与-Web-到底通过什么交互"><a href="#四、Native-与-Web-到底通过什么交互" class="headerlink" title="四、Native 与 Web 到底通过什么交互"></a>四、Native 与 Web 到底通过什么交互</h2><p>这是 WebView 封装中最容易混淆的问题。</p>
+<p>本项目同时使用了第三方 <code>WebViewJavascriptBridge</code> 和 WKWebView 原生 API，但二者承担的层级不同：</p>
+<blockquote>
+<p><strong>主要业务交互走 WebViewJavascriptBridge；三方库底层依然依赖 WKWebView 的导航代理和 JavaScript 执行能力。少量独立消息直接使用 WKScriptMessageHandler。</strong></p>
+</blockquote>
+<h3 id="1-Native-调用-Web：callHandler-evaluateJavaScript"><a href="#1-Native-调用-Web：callHandler-evaluateJavaScript" class="headerlink" title="1. Native 调用 Web：callHandler + evaluateJavaScript"></a>1. Native 调用 Web：callHandler + evaluateJavaScript</h3><p>容器向 H5 发消息时，对外使用统一的 <code>callHandler</code>：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[<span class="keyword">self</span>.hybrid.bridge.jsBridge callHandler:method</span><br><span class="line">                                    data:data</span><br><span class="line">                        responseCallback:callback];</span><br></pre></td></tr></table></figure>
+
+<p>三方库完成参数序列化和 JS 方法拼接后，最终调用：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[webView evaluateJavaScript:javaScript</span><br><span class="line">          completionHandler:completionHandler];</span><br></pre></td></tr></table></figure>
+
+<p>因此，<code>UGHybridBridge</code> 并不是一套新的底层通信机制，它是在 <code>WKWebViewJavascriptBridge</code> 之上增加了：</p>
+<ul>
+<li>请求与响应模型；</li>
+<li>数据序列化和反序列化；</li>
+<li>消息订阅；</li>
+<li>Hybrid 模块分发；</li>
+<li>统一的回调类型。</li>
+</ul>
+<h3 id="2-Web-调用-Native：当前三方库使用自定义-URL-Scheme"><a href="#2-Web-调用-Native：当前三方库使用自定义-URL-Scheme" class="headerlink" title="2. Web 调用 Native：当前三方库使用自定义 URL Scheme"></a>2. Web 调用 Native：当前三方库使用自定义 URL Scheme</h3><p>很多人看到 <code>WKWebViewJavascriptBridge</code>，会默认它通过 <code>WKScriptMessageHandler</code> 收消息，但 <strong>具体实现要以项目引入的版本为准</strong>。</p>
+<p>本文项目当前版本的 Web → Native 流程是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">JS 将消息放入队列</span><br><span class="line">→ 触发自定义 Scheme 导航</span><br><span class="line">→ WKNavigationDelegate 识别并拦截 URL</span><br><span class="line">→ decisionHandler(Cancel)，取消伪导航</span><br><span class="line">→ Native 通过 evaluateJavaScript 读取 JS 消息队列</span><br><span class="line">→ 按 handlerName 找到对应 Native Handler</span><br><span class="line">→ 执行业务并通过 responseCallback 回传结果</span><br></pre></td></tr></table></figure>
+
+<p>也就是说，这一版三方库主要组合了两项 WKWebView 原生能力：</p>
+<ul>
+<li><code>WKNavigationDelegate</code>：感知 JS 发出的自定义 Scheme 消息；</li>
+<li><code>evaluateJavaScript</code>：读取消息、执行 JS 和回传结果。</li>
+</ul>
+<p>自定义 Scheme 在这里只是通信信号，并不是真正要打开的网页，因此拦截后必须取消导航。</p>
+<h3 id="3-为什么-Controller-的导航代理没有失效"><a href="#3-为什么-Controller-的导航代理没有失效" class="headerlink" title="3. 为什么 Controller 的导航代理没有失效"></a>3. 为什么 Controller 的导航代理没有失效</h3><p>三方库初始化时会把自己设置成 WebView 的 <code>navigationDelegate</code>：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">_webView.navigationDelegate = <span class="keyword">self</span>;</span><br><span class="line">_webViewDelegate = originalDelegate;</span><br></pre></td></tr></table></figure>
+
+<p>随后形成一个简单的代理转发结构：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">WKWebView</span><br><span class="line">   │ navigationDelegate</span><br><span class="line">   ▼</span><br><span class="line">WKWebViewJavascriptBridge</span><br><span class="line">   │</span><br><span class="line">   ├── Bridge 私有 Scheme：内部处理并取消导航</span><br><span class="line">   │</span><br><span class="line">   └── 普通网页导航：转发给原 Controller</span><br></pre></td></tr></table></figure>
+
+<p>所以普通页面的 <code>didFinishNavigation:</code>、<code>didFailNavigation:</code> 和 <code>decidePolicyForNavigationAction:</code> 仍然可以回到业务容器。</p>
+<p>这也是封装 Bridge 时必须注意的一点：<strong>WKWebView 的代理只能有一个，桥接库和容器不能互相覆盖代理而不转发。</strong></p>
+<h2 id="五、WKScriptMessageHandler-还需要吗"><a href="#五、WKScriptMessageHandler-还需要吗" class="headerlink" title="五、WKScriptMessageHandler 还需要吗"></a>五、WKScriptMessageHandler 还需要吗</h2><p>需要，但它不一定必须承载所有业务 Bridge。</p>
+<p>项目中也直接使用了 <code>WKScriptMessageHandler</code>，主要处理网页触摸事件和 DEBUG 资源调试。JS 侧调用：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">window</span>.<span class="property">webkit</span>.<span class="property">messageHandlers</span>.<span class="property">UMUCustomTouchEvent</span>.<span class="title function_">postMessage</span>(<span class="literal">true</span>)</span><br></pre></td></tr></table></figure>
+
+<p>Native 侧注册并接收：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[userContentController addScriptMessageHandler:<span class="keyword">self</span></span><br><span class="line">                                          name:<span class="string">@&quot;UMUCustomTouchEvent&quot;</span>];</span><br><span class="line"></span><br><span class="line">- (<span class="type">void</span>)userContentController:(<span class="built_in">WKUserContentController</span> *)userContentController</span><br><span class="line">      didReceiveScriptMessage:(<span class="built_in">WKScriptMessage</span> *)message &#123;</span><br><span class="line">    <span class="keyword">if</span> ([message.name isEqualToString:<span class="string">@&quot;UMUCustomTouchEvent&quot;</span>]) &#123;</span><br><span class="line">        <span class="keyword">self</span>.isTouchWeb = [message.body boolValue];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>两种方案可以这样理解：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>特点</th>
+<th>项目中的主要用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WebViewJavascriptBridge</td>
+<td>自带 Handler 注册、消息队列和回调协议，但当前版本依赖自定义 Scheme</td>
+<td>主要 Hybrid 业务通信</td>
+</tr>
+<tr>
+<td>WKScriptMessageHandler</td>
+<td>WKWebView 原生消息通道，直接、清晰</td>
+<td>触摸事件、调试消息等独立通知</td>
+</tr>
+<tr>
+<td>evaluateJavaScript</td>
+<td>Native 主动执行 JS，可获取执行结果</td>
+<td>Native → Web、读取 JS 队列、页面脚本注入</td>
+</tr>
+<tr>
+<td>WKNavigationDelegate</td>
+<td>页面导航和 URL 策略控制</td>
+<td>路由拦截、三方 Bridge 私有 Scheme</td>
+</tr>
+</tbody></table>
+<p>如果重新设计一套轻量 Bridge，可以优先考虑 <code>WKScriptMessageHandler + evaluateJavaScript</code>，减少伪导航。但如果现有三方 Bridge 已稳定承载大量业务，就没有必要只为“更原生”而整体重写，关键是保持协议清晰和模块边界合理。</p>
+<h2 id="六、两套业务分发方式：Handler-与-Module"><a href="#六、两套业务分发方式：Handler-与-Module" class="headerlink" title="六、两套业务分发方式：Handler 与 Module"></a>六、两套业务分发方式：Handler 与 Module</h2><h3 id="1-旧版：按-handlerName-分发"><a href="#1-旧版：按-handlerName-分发" class="headerlink" title="1. 旧版：按 handlerName 分发"></a>1. 旧版：按 handlerName 分发</h3><p>旧版逻辑先注册一组 JS 方法名，收到消息后根据 <code>handlerName</code> 分发：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">JS Handler</span><br><span class="line">   │</span><br><span class="line">   ├── Common Call</span><br><span class="line">   │     ├── 分享</span><br><span class="line">   │     ├── 登录</span><br><span class="line">   │     ├── 关闭页面</span><br><span class="line">   │     └── 相机、相册</span><br><span class="line">   │</span><br><span class="line">   └── Business Call</span><br><span class="line">         ├── 跳转课程</span><br><span class="line">         ├── 提交作业</span><br><span class="line">         └── 加入会议</span><br></pre></td></tr></table></figure>
+
+<p>这种方式简单直接，适合方法较少的阶段。但随着业务增长，<code>if/else</code> 和 Controller Category 会越来越多，公共能力与业务调用仍然集中在容器附近。</p>
+<h3 id="2-新版：namespace-method-模块化"><a href="#2-新版：namespace-method-模块化" class="headerlink" title="2. 新版：namespace + method 模块化"></a>2. 新版：namespace + method 模块化</h3><p>新版协议为消息增加命名空间：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;namespace&quot;</span><span class="punctuation">:</span> <span class="string">&quot;navigation&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;method&quot;</span><span class="punctuation">:</span> <span class="string">&quot;popBack&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><code>UGHybridBridge</code> 接收并反序列化消息后，将消息广播给已注册模块。每个 Module 自己判断：</p>
+<ol>
+<li><code>namespace</code> 是否匹配；</li>
+<li><code>method</code> 是否属于自己的支持集合；</li>
+<li>是否需要经过拦截器；</li>
+<li>如何执行并回调 H5。</li>
+</ol>
+<p>例如 Navigation Module 只负责：</p>
+<ul>
+<li><code>closePage</code>：关闭当前原生容器；</li>
+<li><code>popBack</code>：WebView 能后退则后退，否则关闭容器；</li>
+<li><code>openSysBrowser</code>：打开系统浏览器。</li>
+</ul>
+<p>这种设计的重点是：<strong>Bridge 只负责传消息，Module 才负责具体能力。</strong></p>
+<p>新增业务能力时，应该优先新增或扩展 Module，而不是继续修改容器。容器只负责注册模块和提供必要的宿主能力。</p>
+<h2 id="七、URL-跳转为什么要独立成路由策略"><a href="#七、URL-跳转为什么要独立成路由策略" class="headerlink" title="七、URL 跳转为什么要独立成路由策略"></a>七、URL 跳转为什么要独立成路由策略</h2><p>Hybrid 页面中的链接可能对应多种行为：</p>
+<ul>
+<li>普通 H5 页面，继续在当前 WebView 加载；</li>
+<li>App 内部页面，转交 Native Router；</li>
+<li>自定义 Scheme，唤起其他 App；</li>
+<li>外部 HTTP/HTTPS 链接，选择 App 内或系统浏览器打开；</li>
+<li><code>target=&quot;_blank&quot;</code>，决定是否在当前页面加载；</li>
+<li>特殊业务域名，进入定制流程。</li>
+</ul>
+<p>项目在 <code>decidePolicyForNavigationAction:</code> 中集中处理这些分支，并将复杂的外链判断交给独立 Interceptor。</p>
+<p>核心原则是：</p>
+<blockquote>
+<p><strong>Web 页面只表达“要去哪里”，Native 路由和拦截器决定“以什么方式打开”。</strong></p>
+</blockquote>
+<p>这样 H5 不需要理解 iOS 的 Controller 跳转细节，Native 也能统一实施安全限制、外链提示和特殊业务规则。</p>
+<h2 id="八、生命周期与资源释放不能漏"><a href="#八、生命周期与资源释放不能漏" class="headerlink" title="八、生命周期与资源释放不能漏"></a>八、生命周期与资源释放不能漏</h2><p>一个完整的 WebView 容器还需要处理以下问题：</p>
+<ul>
+<li>页面开始、完成和失败时更新 Loading 与进度条；</li>
+<li>通过 <code>WKUIDelegate</code> 将 JS Alert、Confirm、Prompt 转为原生弹窗；</li>
+<li>App 进入后台或回到前台时通知 H5；</li>
+<li>监听 <code>webViewWebContentProcessDidTerminate:</code>，记录 Web 内容进程异常；</li>
+<li>页面销毁时清空 <code>navigationDelegate</code> 和 <code>UIDelegate</code>；</li>
+<li>页面消失或销毁时移除对应的 ScriptMessageHandler；</li>
+<li>清理通知、手势、延迟任务和不再需要的观察订阅。</li>
+</ul>
+<p>尤其要注意：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[userContentController removeScriptMessageHandlerForName:<span class="string">@&quot;UMUCustomTouchEvent&quot;</span>];</span><br></pre></td></tr></table></figure>
+
+<p><code>WKUserContentController</code> 对 ScriptMessageHandler 的持有关系如果处理不当，容易造成容器无法释放。动态注册和移除时，还要保证同一时期的添加与移除成对出现，避免重复注册或移除不存在的 Handler。</p>
+<h2 id="九、从这套封装中可以沉淀什么"><a href="#九、从这套封装中可以沉淀什么" class="headerlink" title="九、从这套封装中可以沉淀什么"></a>九、从这套封装中可以沉淀什么</h2><p>这套实现最值得借鉴的，不是具体类名，而是以下边界：</p>
+<ol>
+<li><strong>容器只负责承载页面</strong>，不要把所有业务都写进 Controller；</li>
+<li><strong>配置负责通用差异</strong>，不要用大量子类复制 WebView 初始化代码；</li>
+<li><strong>Bridge 只负责通信</strong>，序列化、回调和协议保持统一；</li>
+<li><strong>Module 负责原生能力</strong>，通过命名空间和方法名隔离业务；</li>
+<li><strong>Router 负责跳转策略</strong>，H5 不直接控制 Native 导航细节；</li>
+<li><strong>生命周期独立管理</strong>，加载失败、进程异常和资源释放都有明确处理；</li>
+<li><strong>理解三方库的底层实现</strong>，不能把所有 Bridge 都简单等同于 <code>WKScriptMessageHandler</code>。</li>
+</ol>
+<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>iOS WebView 封装的本质，是把一个单纯的内容渲染控件升级为可配置、可通信、可路由、可监控的 Hybrid 容器。</p>
+<p>本文项目的主要业务通信链路可以概括为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Native → Web：</span><br><span class="line">业务模块 → UGHybridBridge → WebViewJavascriptBridge</span><br><span class="line">        → evaluateJavaScript → H5</span><br><span class="line"></span><br><span class="line">Web → Native：</span><br><span class="line">H5 消息队列 → 自定义 Scheme → WKNavigationDelegate</span><br><span class="line">           → evaluateJavaScript 读取消息</span><br><span class="line">           → UGHybridBridge → Handler / Hybrid Module</span><br></pre></td></tr></table></figure>
+
+<p>三方 Bridge 与 WK 原生代理并不是二选一：三方库提供通信协议和消息管理，WKWebView 原生 API 提供真正的底层执行能力。真正需要控制的，是通信协议、模块职责和容器生命周期，而不是简单地决定“用三方还是原生”。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/iOS/" rel="tag"># iOS</a>
+              <a href="/tags/WKWebView/" rel="tag"># WKWebView</a>
+              <a href="/tags/Hybrid/" rel="tag"># Hybrid</a>
+              <a href="/tags/JSBridge/" rel="tag"># JSBridge</a>
+              <a href="/tags/WebView/" rel="tag"># WebView</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/11/19/iOS-%E7%A8%B3%E5%AE%9A%E6%80%A7%E4%B8%8E%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E9%98%B2%E5%B4%A9%E6%BA%83%E5%90%AF%E5%8A%A8%E4%B8%8E%E5%88%97%E8%A1%A8%E5%AE%9E%E6%88%98%E6%80%BB%E7%BB%93/" rel="prev" title="iOS 稳定性与性能优化：防崩溃、启动与列表实战总结">
+      <i class="fa fa-chevron-left"></i> iOS 稳定性与性能优化：防崩溃、启动与列表实战总结
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#iOS-WebView-%E5%B0%81%E8%A3%85%E5%AE%9E%E6%88%98%EF%BC%9AHybrid-%E5%AE%B9%E5%99%A8%E3%80%81JSBridge-%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%8C%96%E4%BA%A4%E4%BA%92%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.</span> <span class="nav-text">iOS WebView 封装实战：Hybrid 容器、JSBridge 与模块化交互设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E5%8F%AA%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA-WKWebView"><span class="nav-number">1.1.</span> <span class="nav-text">一、为什么不能只创建一个 WKWebView</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%EF%BC%9A%E5%AE%B9%E5%99%A8%E3%80%81%E6%A1%A5%E6%8E%A5%E5%B1%82%E5%92%8C%E8%83%BD%E5%8A%9B%E6%A8%A1%E5%9D%97"><span class="nav-number">1.2.</span> <span class="nav-text">二、整体架构：容器、桥接层和能力模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%AE%B9%E5%99%A8%E5%B1%82%EF%BC%9A%E7%BB%9F%E4%B8%80%E5%88%9D%E5%A7%8B%E5%8C%96%E5%92%8C%E9%A1%B5%E9%9D%A2%E9%85%8D%E7%BD%AE"><span class="nav-number">1.3.</span> <span class="nav-text">三、容器层：统一初始化和页面配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E7%BB%9F%E4%B8%80-WebView-%E5%88%9B%E5%BB%BA%E6%B5%81%E7%A8%8B"><span class="nav-number">1.3.1.</span> <span class="nav-text">1. 统一 WebView 创建流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E7%94%A8%E9%85%8D%E7%BD%AE%E5%AF%B9%E8%B1%A1%E6%89%BF%E6%8E%A5%E9%A1%B5%E9%9D%A2%E5%B7%AE%E5%BC%82"><span class="nav-number">1.3.2.</span> <span class="nav-text">2. 用配置对象承接页面差异</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Native-%E4%B8%8E-Web-%E5%88%B0%E5%BA%95%E9%80%9A%E8%BF%87%E4%BB%80%E4%B9%88%E4%BA%A4%E4%BA%92"><span class="nav-number">1.4.</span> <span class="nav-text">四、Native 与 Web 到底通过什么交互</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Native-%E8%B0%83%E7%94%A8-Web%EF%BC%9AcallHandler-evaluateJavaScript"><span class="nav-number">1.4.1.</span> <span class="nav-text">1. Native 调用 Web：callHandler + evaluateJavaScript</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Web-%E8%B0%83%E7%94%A8-Native%EF%BC%9A%E5%BD%93%E5%89%8D%E4%B8%89%E6%96%B9%E5%BA%93%E4%BD%BF%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89-URL-Scheme"><span class="nav-number">1.4.2.</span> <span class="nav-text">2. Web 调用 Native：当前三方库使用自定义 URL Scheme</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E4%B8%BA%E4%BB%80%E4%B9%88-Controller-%E7%9A%84%E5%AF%BC%E8%88%AA%E4%BB%A3%E7%90%86%E6%B2%A1%E6%9C%89%E5%A4%B1%E6%95%88"><span class="nav-number">1.4.3.</span> <span class="nav-text">3. 为什么 Controller 的导航代理没有失效</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81WKScriptMessageHandler-%E8%BF%98%E9%9C%80%E8%A6%81%E5%90%97"><span class="nav-number">1.5.</span> <span class="nav-text">五、WKScriptMessageHandler 还需要吗</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E4%B8%A4%E5%A5%97%E4%B8%9A%E5%8A%A1%E5%88%86%E5%8F%91%E6%96%B9%E5%BC%8F%EF%BC%9AHandler-%E4%B8%8E-Module"><span class="nav-number">1.6.</span> <span class="nav-text">六、两套业务分发方式：Handler 与 Module</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%97%A7%E7%89%88%EF%BC%9A%E6%8C%89-handlerName-%E5%88%86%E5%8F%91"><span class="nav-number">1.6.1.</span> <span class="nav-text">1. 旧版：按 handlerName 分发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E6%96%B0%E7%89%88%EF%BC%9Anamespace-method-%E6%A8%A1%E5%9D%97%E5%8C%96"><span class="nav-number">1.6.2.</span> <span class="nav-text">2. 新版：namespace + method 模块化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81URL-%E8%B7%B3%E8%BD%AC%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E7%8B%AC%E7%AB%8B%E6%88%90%E8%B7%AF%E7%94%B1%E7%AD%96%E7%95%A5"><span class="nav-number">1.7.</span> <span class="nav-text">七、URL 跳转为什么要独立成路由策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E4%B8%8E%E8%B5%84%E6%BA%90%E9%87%8A%E6%94%BE%E4%B8%8D%E8%83%BD%E6%BC%8F"><span class="nav-number">1.8.</span> <span class="nav-text">八、生命周期与资源释放不能漏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E4%BB%8E%E8%BF%99%E5%A5%97%E5%B0%81%E8%A3%85%E4%B8%AD%E5%8F%AF%E4%BB%A5%E6%B2%89%E6%B7%80%E4%BB%80%E4%B9%88"><span class="nav-number">1.9.</span> <span class="nav-text">九、从这套封装中可以沉淀什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">1.10.</span> <span class="nav-text">十、总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lijifeng"
+      src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/avatar.jpg">
+  <p class="site-author-name" itemprop="name">lijifeng</p>
+  <div class="site-description" itemprop="description">个人博客</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">30</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://carlwe.com/" title="https:&#x2F;&#x2F;carlwe.com&#x2F;" rel="noopener" target="_blank">carlwe</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">晋ICP备2022005502号 </a>
+      <img src="https://blog-1311875715.cos.ap-beijing.myqcloud.com/blog/policebeian.png" style="display: inline-block;">
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lijifeng</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
